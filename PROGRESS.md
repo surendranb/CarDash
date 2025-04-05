@@ -32,7 +32,7 @@ Android app for OBD2 vehicle diagnostics with real-time metrics and trip history
 ## Commit History
 | Feature | Commit Hash | Date |
 |---------|-------------|------|
-| Initial setup | - | - |
+| Initial setup | d200383 | 04/05/2025 |
 
 ## Known Issues
 1. None yet
