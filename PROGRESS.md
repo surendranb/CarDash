@@ -6,8 +6,8 @@ Android app for OBD2 vehicle diagnostics with real-time metrics and trip history
 ## Development Phases
 
 ### Phase 1: UI Foundation
-- [ ] Initialize Git repository
-- [ ] Create basic tab navigation
+- [x] Initialize Git repository
+- [x] Create basic tab navigation
 - [ ] Implement metric card components
 - [ ] Set up color threshold system
 - [ ] Create graph view placeholder
@@ -33,6 +33,7 @@ Android app for OBD2 vehicle diagnostics with real-time metrics and trip history
 | Feature | Commit Hash | Date |
 |---------|-------------|------|
 | Initial setup | d200383 | 04/05/2025 |
+| Basic tab navigation | 0c41cbf | 04/05/2025 |
 
 ## Known Issues
 1. None yet
