@@ -34,6 +34,11 @@ Android app for OBD2 vehicle diagnostics with real-time metrics and trip history
 |---------|-------------|------|
 | Initial setup | d200383 | 04/05/2025 |
 | Basic tab navigation | 0c41cbf | 04/05/2025 |
+| Tab navigation fixes | 4e13474 | 04/05/2025 |
+
+## Development Process
+1. Code changes must be verified with './gradlew assembleDebug' before commit
+2. Only working, compiling code should be committed
 
 ## Known Issues
 1. None yet
