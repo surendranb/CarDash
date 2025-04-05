@@ -6,17 +6,17 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.cardash.ui.components.MetricCard
+import com.example.cardash.ui.components.MetricStatus
 
 @Composable
 fun MetricGridScreen() {
     val metrics = listOf(
-        MetricData("RPM", "2500", "rpm", Color.Green),
-        MetricData("Speed", "65", "km/h", Color.Yellow),
-        MetricData("Coolant", "92", "°C", Color.Red),
-        MetricData("Voltage", "13.8", "V", Color.Green)
+        MetricData("RPM", "2500", "rpm", MetricStatus.GOOD),
+        MetricData("Speed", "65", "km/h", MetricStatus.WARNING),
+        MetricData("Coolant", "92", "°C", MetricStatus.ERROR),
+        MetricData("Voltage", "13.8", "V", MetricStatus.GOOD)
     )
 
     LazyVerticalGrid(
@@ -28,7 +28,7 @@ fun MetricGridScreen() {
                 title = metric.title,
                 value = metric.value,
                 unit = metric.unit,
-                statusColor = metric.color
+                status = metric.status
             )
         }
     }
@@ -38,5 +38,5 @@ data class MetricData(
     val title: String,
     val value: String,
     val unit: String,
-    val color: Color
+    val status: MetricStatus
 )
