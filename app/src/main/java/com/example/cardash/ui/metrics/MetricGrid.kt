@@ -1,22 +1,32 @@
 package com.example.cardash.ui.metrics
 
+// Removed duplicate import
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridCells // Keep one GridCells import
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel // Import viewModel
 import com.example.cardash.ui.components.MetricCard
 import com.example.cardash.ui.components.MetricStatus
 
 @Composable
-fun MetricGridScreen() {
+fun MetricGridScreen(
+    viewModel: MetricViewModel = viewModel() // Inject ViewModel
+) {
+    val rpm by viewModel.rpm.collectAsState() // Collect RPM state
+
+    // TODO: Replace other hardcoded metrics later
     val metrics = listOf(
-        MetricData("RPM", "2500", "rpm", MetricStatus.GOOD),
-        MetricData("Speed", "65", "km/h", MetricStatus.WARNING),
-        MetricData("Coolant", "92", "°C", MetricStatus.ERROR),
-        MetricData("Voltage", "13.8", "V", MetricStatus.GOOD)
+        // Determine RPM status based on value later, for now NORMAL
+        MetricData("RPM", rpm.toString(), "rpm", MetricStatus.NORMAL), // Use collected RPM, default status NORMAL
+        MetricData("Speed", "---", "km/h", MetricStatus.NORMAL), // Placeholder, use NORMAL
+        MetricData("Coolant", "---", "°C", MetricStatus.NORMAL), // Placeholder, use NORMAL
+        MetricData("Voltage", "---", "V", MetricStatus.NORMAL) // Placeholder, use NORMAL
     )
 
     LazyVerticalGrid(

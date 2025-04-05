@@ -10,13 +10,13 @@ Android app for OBD2 vehicle diagnostics with real-time metrics and trip history
 - [x] Create basic tab navigation
 - [x] Implement metric card components
 - [x] Set up color threshold system
-- [ ] Create graph view placeholder
+- [x] Create graph view placeholder
 
-### Phase 2: OBD2 Integration  
-- [ ] Add OBD-Java-API dependency
-- [ ] Implement RPM data service
-- [ ] Create mock data provider
-- [ ] Display real-time RPM in grid
+### Phase 2: OBD2 Integration (Bluetooth)
+- [x] Implement RPM command service via Bluetooth
+- [x] Handle OBD command parsing/errors (Basic RPM parsing implemented)
+- [x] Display real-time RPM in metrics grid
+- [ ] Test with physical OBD2 scanner
 
 ### Phase 3: Data Persistence
 - [ ] Setup Room database
