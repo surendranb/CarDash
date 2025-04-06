@@ -33,13 +33,50 @@ class BluetoothManager(private val context: Context) {
 
     @SuppressLint("MissingPermission")
     fun createSocket(deviceAddress: String): BluetoothSocket? {
-        if (!isBluetoothEnabled()) return null
+        if (!isBluetoothEnabled()) {
+            println("BluetoothManager: Bluetooth not enabled")
+            return null
+        }
         
         return try {
+            println("BluetoothManager: Creating socket for $deviceAddress")
             val device = bluetoothAdapter?.getRemoteDevice(deviceAddress)
-            device?.createRfcommSocketToServiceRecord(sppUUID)
+            println("BluetoothManager: Found device: ${device?.name ?: "Unknown"}")
+            // Try secure RFCOMM first
+            try {
+                val socket = device?.createRfcommSocketToServiceRecord(sppUUID)
+                println("BluetoothManager: Secure RFCOMM socket created")
+                return socket
+            } catch (e: IOException) {
+                println("BluetoothManager: Secure RFCOMM failed, trying insecure: ${e.message}")
+                // Fallback to insecure RFCOMM
+                try {
+                    val socket = device?.javaClass?.getMethod(
+                        "createInsecureRfcommSocketToServiceRecord", 
+                        UUID::class.java
+                    )?.invoke(device, sppUUID) as? BluetoothSocket
+                    println("BluetoothManager: Insecure RFCOMM socket created")
+                    return socket
+                } catch (e: Exception) {
+                    println("BluetoothManager: Both secure and insecure RFCOMM failed")
+                    throw e
+                }
+            }
         } catch (e: IOException) {
+            println("BluetoothManager: Socket creation failed: ${e.javaClass.simpleName} - ${e.message}")
             null
+        } catch (e: Exception) {
+            println("BluetoothManager: Unexpected error: ${e.javaClass.simpleName} - ${e.message}")
+            null
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun isDevicePaired(deviceAddress: String): Boolean {
+        return if (isBluetoothEnabled()) {
+            bluetoothAdapter?.bondedDevices?.any { it.address == deviceAddress } ?: false
+        } else {
+            false
         }
     }
 

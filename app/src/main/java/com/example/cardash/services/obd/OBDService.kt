@@ -65,13 +65,22 @@ class OBDService(
     suspend fun connect(deviceAddress: String): ConnectionResult {
         return withContext(ioScope.coroutineContext) {
             try {
-                println("Attempting to connect to $deviceAddress")
+                println("OBDService: Starting connection to $deviceAddress")
+                
+                // Verify device is paired
+                if (!bluetoothManager.isDevicePaired(deviceAddress)) {
+                    println("OBDService: Device $deviceAddress not paired")
+                    return@withContext ConnectionResult.Error("Device not paired - please pair first in Bluetooth settings")
+                }
+
                 socket = bluetoothManager.createSocket(deviceAddress)
-                    ?: return@withContext ConnectionResult.Error("Failed to create socket")
+                    ?: return@withContext ConnectionResult.Error("Failed to create Bluetooth socket")
                 
                 println("Socket created, attempting connection...")
                 try {
-                    socket?.connect()
+                    println("Attempting direct socket connect...")
+                    socket?.connect() // Direct connect call
+                    println("Socket connect call completed.")
                 } catch (e: IOException) {
                     if (e.message?.contains("Device or resource busy") == true) {
                         return@withContext ConnectionResult.Error(
@@ -80,6 +89,10 @@ class OBDService(
                     }
                     throw e
                 }
+                // Verify socket connectivity
+                if (socket?.isConnected != true) {
+                    return@withContext ConnectionResult.Error("Socket not connected")
+                }
                 delay(1000) // Wait for connection stabilization
                 
                 inputStream = socket?.inputStream
@@ -87,33 +100,82 @@ class OBDService(
                 outputStream = socket?.outputStream
                     ?: return@withContext ConnectionResult.Error("No output stream")
                 
-                // Verify OBD2 compatibility
-                try {
-                    sendCommand("ATZ") // Reset command
-                    val response = sendCommand("0100") // Mode 01 PID 00
-                    if (!response.contains("41 00")) {
-                        return@withContext ConnectionResult.Error("Device doesn't support OBD2 protocol")
-                    }
+                 // Full OBD2 Initialization Sequence
+                 var response = "" // Declare response here
+                 try {
+                    println("OBDService: Sending ATZ (Reset)...")
+                    sendCommand("ATZ")
+                    delay(1500) // Delay after reset
+
+                    println("OBDService: Sending ATE0 (Echo Off)...")
+                    sendCommand("ATE0")
+                    delay(200)
+
+                    println("OBDService: Sending ATSP0 (Protocol Auto)...")
+                    sendCommand("ATSP0") // Revert to automatic protocol detection
+                    delay(3000) // Increased delay after protocol set, matching DriveWise's implicit delay
+
+                    // Removed ATL0, ATS0, ATH0 commands
+                    // Removed consumeInitialBuffer() call
+                    // Removed 0100 verification command and check
+
+                    println("OBDService: Initialization sequence completed (DriveWise style).")
                 } catch (e: Exception) {
-                    return@withContext ConnectionResult.Error("OBD2 verification failed: ${e.message}")
+                     println("OBDService: Initialization Error: ${e.javaClass.simpleName} - ${e.message}")
+                     return@withContext ConnectionResult.Error("OBD2 initialization failed: ${e.message}")
                 }
+                // println("OBDService: Connect function - exiting try block") // Removed redundant log
                 
                 println("Connected successfully!")
                 isRunning = true
                 ConnectionResult.Success
             } catch (e: Exception) {
-                println("Connection failed: ${e.message}")
+                println("OBDService Connection Failed:")
                 e.printStackTrace()
+                println("Socket state: ${socket?.isConnected}")
+                println("Bluetooth enabled: ${bluetoothManager.isBluetoothEnabled()}")
+                println("Error details: ${e.javaClass.simpleName} - ${e.message}")
                 disconnect()
                 ConnectionResult.Error(
                     when {
-                        e.message?.contains("read failed") == true -> "Incompatible device - please select an OBD2 adapter"
-                        else -> e.message ?: "Connection failed"
+                        e is java.net.SocketTimeoutException -> "Connection timed out - verify adapter power and proximity"
+                        e.message?.contains("read failed") == true -> "Communication error - try restarting adapter"
+                        e.message?.contains("refused") == true -> "Connection refused - ensure adapter is not in use"
+                        else -> e.message ?: "Connection failed - check adapter and try again"
                     }
                 )
             }
         }
     }
+
+    // Helper function to read and discard initial buffer data
+    private suspend fun consumeInitialBuffer() {
+        withContext(Dispatchers.IO) {
+            try {
+                // Give some time for potential initial data to arrive
+                delay(500)
+                val buffer = ByteArray(1024)
+                var bytesRead = 0
+                // Read available data without blocking indefinitely
+                while (inputStream?.available() ?: 0 > 0) {
+                    bytesRead = inputStream?.read(buffer) ?: 0
+                    if (bytesRead > 0) {
+                         val discardedData = String(buffer, 0, bytesRead).trim()
+                         println("OBDService: Discarded initial data: '$discardedData'")
+                    }
+                    // Add a small delay to prevent tight loop if data keeps coming
+                    delay(50)
+                }
+                 println("OBDService: Finished consuming initial buffer.")
+            } catch (e: IOException) {
+                println("OBDService: Error consuming initial buffer: ${e.message}")
+                // Don't necessarily fail connection here, proceed to verification
+            } catch (e: Exception) {
+                 println("OBDService: Unexpected error consuming initial buffer: ${e.message}")
+            }
+        }
+    }
+
 
     fun disconnect() {
         isRunning = false
@@ -235,7 +297,7 @@ class OBDService(
         while (isRunning) {
             try {
                 emit(getFuelLevel())
-                delay(5000) // Poll every 5 seconds
+            delay(5000) // Poll every 5 seconds
             } catch (e: Exception) {
                 // Handle errors
             }

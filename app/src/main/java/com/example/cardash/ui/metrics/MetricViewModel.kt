@@ -67,8 +67,10 @@ class MetricViewModel(
                     startThrottlePositionCollection()
                 }
                 is OBDService.ConnectionResult.Error -> {
+                    println("Connection failed: ${result.message}")
                     _connectionState.value = ConnectionState.Failed(result.message)
                     _errorMessage.emit("Connection error: ${result.message}")
+                    // Add retry logic if needed
                 }
             }
         }
