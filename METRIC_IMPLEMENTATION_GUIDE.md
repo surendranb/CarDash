@@ -97,9 +97,14 @@ val speedFlow: Flow<Int> = flow {
 ## Common Pitfalls & Solutions
 
 1. **UI Component Issues**:
-   - Ensure all imports are correct (MetricCard, colors, etc.)
-   - MetricCard uses `status` parameter (MetricStatus enum) not color
+   - Ensure all imports are correct (MetricCard, MetricStatus, etc.)
+   - MetricCard only accepts these status values from enum:
+     * NORMAL (default safe operating range)
+     * WARNING (approaching limits)
+     * ERROR (dangerous/damaging levels)  
+   - Do not create custom status values - use the existing enum
    - Verify @Composable context is properly set
+   - Include imports from both components and theme packages
 
 2. **Build Verification**:
    - Always run `./gradlew assembleDebug` before committing

@@ -17,6 +17,7 @@ import com.example.cardash.ui.components.MetricStatus
 import com.example.cardash.ui.metrics.IntakeAirTempMetricCard
 import com.example.cardash.ui.metrics.MetricViewModel
 import com.example.cardash.ui.metrics.ThrottlePositionMetricCard
+import com.example.cardash.ui.metrics.FuelPressureMetricCard
 
 @Composable
 fun MetricGridScreen(
@@ -30,6 +31,7 @@ fun MetricGridScreen(
     val intakeAirTemp by viewModel.intakeAirTemp.collectAsState()
 
     val throttlePosition by viewModel.throttlePosition.collectAsState()
+    val fuelPressure by viewModel.fuelPressure.collectAsState()
 
     val metrics = listOf(
         MetricData("RPM", rpm.toString(), "rpm", MetricStatus.NORMAL),
@@ -38,7 +40,8 @@ fun MetricGridScreen(
         MetricData("COOLANT", coolantTemp.toString(), "°C", MetricStatus.NORMAL),
         MetricData("FUEL", fuelLevel.toString(), "%", MetricStatus.NORMAL),
         MetricData("IAT", intakeAirTemp.toString(), "°C", MetricStatus.NORMAL),
-        MetricData("THROTTLE", throttlePosition.toString(), "%", MetricStatus.NORMAL)
+        MetricData("THROTTLE", throttlePosition.toString(), "%", MetricStatus.NORMAL),
+        MetricData("FUEL PRESS", fuelPressure.toString(), "kPa", MetricStatus.NORMAL)
     )
 
     LazyVerticalGrid(

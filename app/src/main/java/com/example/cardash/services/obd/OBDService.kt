@@ -162,6 +162,7 @@ class OBDService(
         private const val ENGINE_LOAD_COMMAND = "01 04"
         private const val COOLANT_TEMP_COMMAND = "01 05"
         private const val FUEL_LEVEL_COMMAND = "01 2F"
+        private const val FUEL_PRESSURE_COMMAND = "01 0A"
         private const val INTAKE_AIR_TEMP_COMMAND = "01 0F"
         private const val THROTTLE_POSITION_COMMAND = "01 11"
     }
@@ -304,5 +305,31 @@ class OBDService(
             return (values[1].toIntOrNull(16) ?: 0) * 100 / 255 // Convert to percentage (0-100%)
         }
         throw Exception("Invalid throttle position response")
+    }
+
+    val fuelPressureFlow: Flow<Int> = flow {
+        while (isRunning) {
+            try {
+                emit(getFuelPressure())
+                delay(2000) // Poll every 2 seconds
+            } catch (e: Exception) {
+                // Handle errors
+            }
+        }
+    }.catch { e ->
+        // Handle flow errors
+    }
+
+    suspend fun getFuelPressure(): Int {
+        val response = sendCommand(FUEL_PRESSURE_COMMAND)
+        return parseFuelPressureResponse(response)
+    }
+
+    private fun parseFuelPressureResponse(response: String): Int {
+        val values = response.split(" ")
+        if (values.size >= 2) {
+            return values[1].toIntOrNull(16) ?: 0 // Returns pressure in kPa (0-765 kPa)
+        }
+        throw Exception("Invalid fuel pressure response")
     }
 }

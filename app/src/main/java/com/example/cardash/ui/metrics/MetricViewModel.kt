@@ -38,6 +38,9 @@ class MetricViewModel(
     private val _throttlePosition = MutableStateFlow(0)
     val throttlePosition = _throttlePosition.asStateFlow()
 
+    private val _fuelPressure = MutableStateFlow(0)
+    val fuelPressure = _fuelPressure.asStateFlow()
+
     private val _errorMessage = MutableSharedFlow<String>()
     val errorMessage = _errorMessage.asSharedFlow()
 
@@ -150,6 +153,14 @@ class MetricViewModel(
         viewModelScope.launch {
             obdService.throttlePositionFlow.collect { position ->
                 _throttlePosition.value = position
+            }
+        }
+    }
+
+    private fun startFuelPressureCollection() {
+        viewModelScope.launch {
+            obdService.fuelPressureFlow.collect { pressure ->
+                _fuelPressure.value = pressure
             }
         }
     }
