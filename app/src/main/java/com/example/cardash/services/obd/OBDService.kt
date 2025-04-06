@@ -3,6 +3,7 @@ package com.example.cardash.services.obd
 import android.bluetooth.BluetoothSocket
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -14,6 +15,20 @@ class OBDService(
     private var inputStream: InputStream? = null
     private var outputStream: OutputStream? = null
     private var isRunning = false
+
+    // Speed polling flow  
+    val speedFlow: Flow<Int> = flow {
+        while (isRunning) {
+            try {
+                emit(getSpeed())
+                delay(1000) // Poll every second
+            } catch (e: Exception) {
+                // Handle errors
+            }
+        }
+    }.catch { e ->
+        // Handle flow errors
+    }
 
     // RPM polling flow
     val rpmFlow: Flow<Int> = flow {
@@ -29,29 +44,60 @@ class OBDService(
         // Handle flow errors
     }
 
-    suspend fun connect(deviceAddress: String): Boolean {
+    sealed class ConnectionResult {
+        data object Success : ConnectionResult()
+        data class Error(val message: String) : ConnectionResult()
+    }
+
+    suspend fun connect(deviceAddress: String): ConnectionResult {
         return withContext(ioScope.coroutineContext) {
             try {
                 println("Attempting to connect to $deviceAddress")
                 socket = bluetoothManager.createSocket(deviceAddress)
-                    ?: throw Exception("Failed to create socket")
+                    ?: return@withContext ConnectionResult.Error("Failed to create socket")
                 
                 println("Socket created, attempting connection...")
-                socket?.connect() 
+                try {
+                    socket?.connect()
+                } catch (e: IOException) {
+                    if (e.message?.contains("Device or resource busy") == true) {
+                        return@withContext ConnectionResult.Error(
+                            "Device already in use - close other OBD2 apps and try again"
+                        )
+                    }
+                    throw e
+                }
+                delay(1000) // Wait for connection stabilization
                 
                 inputStream = socket?.inputStream
-                    ?: throw Exception("No input stream")
+                    ?: return@withContext ConnectionResult.Error("No input stream")
                 outputStream = socket?.outputStream
-                    ?: throw Exception("No output stream")
+                    ?: return@withContext ConnectionResult.Error("No output stream")
+                
+                // Verify OBD2 compatibility
+                try {
+                    sendCommand("ATZ") // Reset command
+                    val response = sendCommand("0100") // Mode 01 PID 00
+                    if (!response.contains("41 00")) {
+                        return@withContext ConnectionResult.Error("Device doesn't support OBD2 protocol")
+                    }
+                } catch (e: Exception) {
+                    return@withContext ConnectionResult.Error("OBD2 verification failed: ${e.message}")
+                }
                 
                 println("Connected successfully!")
                 isRunning = true
-                true
+                ConnectionResult.Success
             } catch (e: Exception) {
                 println("Connection failed: ${e.message}")
                 e.printStackTrace()
                 disconnect()
-                false
+                ConnectionResult.Error(
+                    when {
+                        e.message?.contains("read failed") == true -> "Incompatible device - please select an OBD2 adapter"
+                        else -> e.message ?: "Connection failed"
+                    }
+                )
             }
         }
     }
@@ -77,15 +123,56 @@ class OBDService(
     }
 
     private suspend fun sendCommand(command: String): String {
-        outputStream?.let { out ->
-            out.write("$command\r".toByteArray())
-            out.flush()
-            
-            val buffer = ByteArray(1024)
-            val bytes = inputStream?.read(buffer) ?: 0
-            return String(buffer, 0, bytes).trim()
+        return withContext(Dispatchers.IO) {
+            outputStream?.let { out ->
+                try {
+                    out.write("$command\r".toByteArray())
+                    out.flush()
+                    
+                    val buffer = ByteArray(1024)
+                    val bytes = inputStream?.read(buffer) ?: 0
+                    if (bytes <= 0) throw Exception("No response received")
+                    
+                    val response = String(buffer, 0, bytes).trim()
+                    if (response.isEmpty()) throw Exception("Empty response")
+                    
+                    return@withContext response
+                } catch (e: Exception) {
+                    throw Exception("Command failed: ${e.message}")
+                }
+            } ?: throw Exception("Not connected")
         }
-        throw Exception("Not connected")
+    }
+
+    companion object {
+        private const val SPEED_COMMAND = "01 0D"
+        private const val ENGINE_LOAD_COMMAND = "01 04"
+    }
+
+    suspend fun getEngineLoad(): Int {
+        val response = sendCommand(ENGINE_LOAD_COMMAND)
+        return parseEngineLoadResponse(response)
+    }
+
+    private fun parseEngineLoadResponse(response: String): Int {
+        val values = response.split(" ")
+        if (values.size >= 2) {
+            return values[1].toIntOrNull(16) ?: 0 // Returns percentage (0-100)
+        }
+        throw Exception("Invalid engine load response")
+    }
+
+    suspend fun getSpeed(): Int {
+        val response = sendCommand(SPEED_COMMAND)
+        return parseSpeedResponse(response)
+    }
+
+    private fun parseSpeedResponse(response: String): Int {
+        val values = response.split(" ")
+        if (values.size >= 2) {
+            return values[1].toIntOrNull(16) ?: 0 // Speed in km/h
+        }
+        throw Exception("Invalid speed response")
     }
 
     private fun parseRPMResponse(response: String): Int {
