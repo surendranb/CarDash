@@ -163,6 +163,7 @@ class OBDService(
         private const val COOLANT_TEMP_COMMAND = "01 05"
         private const val FUEL_LEVEL_COMMAND = "01 2F"
         private const val INTAKE_AIR_TEMP_COMMAND = "01 0F"
+        private const val THROTTLE_POSITION_COMMAND = "01 11"
     }
 
     suspend fun getEngineLoad(): Int {
@@ -277,5 +278,31 @@ class OBDService(
             return (values[1].toIntOrNull(16) ?: 0) - 40 // Convert to °C
         }
         throw Exception("Invalid intake air temp response")
+    }
+
+    val throttlePositionFlow: Flow<Int> = flow {
+        while (isRunning) {
+            try {
+                emit(getThrottlePosition())
+                delay(1000) // Poll every second
+            } catch (e: Exception) {
+                // Handle errors
+            }
+        }
+    }.catch { e ->
+        // Handle flow errors
+    }
+
+    suspend fun getThrottlePosition(): Int {
+        val response = sendCommand(THROTTLE_POSITION_COMMAND)
+        return parseThrottlePositionResponse(response)
+    }
+
+    private fun parseThrottlePositionResponse(response: String): Int {
+        val values = response.split(" ")
+        if (values.size >= 2) {
+            return (values[1].toIntOrNull(16) ?: 0) * 100 / 255 // Convert to percentage (0-100%)
+        }
+        throw Exception("Invalid throttle position response")
     }
 }

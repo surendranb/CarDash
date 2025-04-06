@@ -35,6 +35,9 @@ class MetricViewModel(
     private val _intakeAirTemp = MutableStateFlow(0)
     val intakeAirTemp = _intakeAirTemp.asStateFlow()
 
+    private val _throttlePosition = MutableStateFlow(0)
+    val throttlePosition = _throttlePosition.asStateFlow()
+
     private val _errorMessage = MutableSharedFlow<String>()
     val errorMessage = _errorMessage.asSharedFlow()
 
@@ -52,6 +55,7 @@ class MetricViewModel(
                     startCoolantTempCollection()
                     startFuelLevelCollection()
                     startIntakeAirTempCollection()
+                    startThrottlePositionCollection()
                 }
                 is OBDService.ConnectionResult.Error -> {
                     _connectionState.value = ConnectionState.Failed(result.message)
@@ -138,6 +142,14 @@ class MetricViewModel(
         viewModelScope.launch {
             obdService.intakeAirTempFlow.collect { temp ->
                 _intakeAirTemp.value = temp
+            }
+        }
+    }
+
+    private fun startThrottlePositionCollection() {
+        viewModelScope.launch {
+            obdService.throttlePositionFlow.collect { position ->
+                _throttlePosition.value = position
             }
         }
     }

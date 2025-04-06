@@ -42,6 +42,7 @@ Android app for OBD2 vehicle diagnostics with real-time metrics and trip history
 | Color scheme update | 9534c8a | 04/05/2025 |
 | Fix: ViewModel injection | f625e0f | 04/05/2025 |
 | feat: Implement fuel level metric | 5f09ce4 | 04/06/2025 |
+| feat: Implement intake air temperature metric | e765c02 | 04/06/2025 |
 
 ## Development Process
 1. Code changes must be built and verified with './gradlew assembleDebug' before commit
@@ -53,6 +54,12 @@ Android app for OBD2 vehicle diagnostics with real-time metrics and trip history
 
 ## Known Issues
 1. None yet
+
+## Final Metrics Implementation Plan
+1. Throttle Position (PID 0111) - Shows percentage throttle opening
+2. Fuel Pressure (PID 010A) - Important fuel system indicator  
+3. Barometric Pressure (PID 0133) - Key atmospheric reading
+4. Timing Advance (PID 010E) - Shows ignition timing adjustment
 
 ## Future Enhancements
 1. Cloud sync
