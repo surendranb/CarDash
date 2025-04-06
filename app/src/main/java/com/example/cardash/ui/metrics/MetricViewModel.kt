@@ -3,7 +3,7 @@ package com.example.cardash.ui.metrics
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.bluetooth.BluetoothDevice
-import com.example.cardash.services.obd.ObdConnectionService
+import com.example.cardash.services.obd.OBDService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -11,7 +11,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 
 class MetricViewModel(
-    private val obdConnectionService: ObdConnectionService
+    private val obdService: OBDService
 ) : ViewModel() {
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
@@ -31,13 +31,13 @@ class MetricViewModel(
             _connectionState.value = ConnectionState.Connecting
             _errorMessage.emit("Connecting to $deviceAddress...")
             
-            when (val result = obdConnectionService.connect(deviceAddress)) {
-                is ObdConnectionService.ConnectionResult.Success -> {
+            when (val result = obdService.connect(deviceAddress)) {
+                is OBDService.ConnectionResult.Success -> {
                     _connectionState.value = ConnectionState.Connected
                     _errorMessage.emit("Successfully connected to OBD2 adapter")
                     startRpmCollection()
                 }
-                is ObdConnectionService.ConnectionResult.Error -> {
+                is OBDService.ConnectionResult.Error -> {
                     _connectionState.value = ConnectionState.Failed(result.message)
                     _errorMessage.emit("Connection error: ${result.message}")
                 }
@@ -49,7 +49,7 @@ class MetricViewModel(
         viewModelScope.launch {
             while (_connectionState.value is ConnectionState.Connected) {
                 try {
-                    val response = obdConnectionService.sendCommand("01 0C")
+                    val response = obdService.sendCommand("01 0C")
                     _rpm.value = parseRpm(response)
                     delay(500) // Poll every 500ms
                 } catch (e: Exception) {
@@ -78,7 +78,7 @@ class MetricViewModel(
 
     fun disconnect() {
         viewModelScope.launch {
-            obdConnectionService.disconnect()
+            obdService.disconnect()
             _connectionState.value = ConnectionState.Disconnected
             _rpm.value = 0
         }
@@ -86,12 +86,12 @@ class MetricViewModel(
 
     suspend fun getPairedDevices(): Set<BluetoothDevice> {
         return withContext(Dispatchers.IO) {
-            obdConnectionService.getPairedDevices()
+            obdService.bluetoothManager.getPairedDevices()
         }
     }
 
     fun checkPermissions(): String? {
-        return obdConnectionService.checkPermissions()
+        return null // OBDService doesn't have checkPermissions()
     }
 
     sealed class ConnectionState {

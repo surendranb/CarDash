@@ -8,7 +8,7 @@ import java.io.InputStream
 import java.io.OutputStream
 
 class OBDService(
-    private val bluetoothManager: BluetoothManager,
+    internal val bluetoothManager: BluetoothManager,
     private val ioScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) {
     private var socket: BluetoothSocket? = null
@@ -136,7 +136,7 @@ class OBDService(
         }
     }
 
-    private suspend fun sendCommand(command: String): String {
+    suspend fun sendCommand(command: String): String {
         return withContext(Dispatchers.IO) {
             outputStream?.let { out ->
                 try {
