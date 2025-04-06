@@ -75,7 +75,7 @@ fun MainScreen(
             DeviceSelectionDialog(
                 devices = devices,
                 onDeviceSelected = { device ->
-                    // TODO: Handle device selection
+                    viewModel.connectToDevice(device.address)
                     showDeviceDialog = false
                 },
                 onDismiss = { showDeviceDialog = false }
