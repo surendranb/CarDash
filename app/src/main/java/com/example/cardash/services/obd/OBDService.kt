@@ -163,6 +163,7 @@ class OBDService(
         private const val COOLANT_TEMP_COMMAND = "01 05"
         private const val FUEL_LEVEL_COMMAND = "01 2F"
         private const val FUEL_PRESSURE_COMMAND = "01 0A"
+        private const val BARO_PRESSURE_COMMAND = "01 33"
         private const val INTAKE_AIR_TEMP_COMMAND = "01 0F"
         private const val THROTTLE_POSITION_COMMAND = "01 11"
     }
@@ -331,5 +332,31 @@ class OBDService(
             return values[1].toIntOrNull(16) ?: 0 // Returns pressure in kPa (0-765 kPa)
         }
         throw Exception("Invalid fuel pressure response")
+    }
+
+    val baroPressureFlow: Flow<Int> = flow {
+        while (isRunning) {
+            try {
+                emit(getBaroPressure())
+                delay(5000) // Poll every 5 seconds (changes slowly)
+            } catch (e: Exception) {
+                // Handle errors
+            }
+        }
+    }.catch { e ->
+        // Handle flow errors
+    }
+
+    suspend fun getBaroPressure(): Int {
+        val response = sendCommand(BARO_PRESSURE_COMMAND)
+        return parseBaroPressureResponse(response)
+    }
+
+    private fun parseBaroPressureResponse(response: String): Int {
+        val values = response.split(" ")
+        if (values.size >= 2) {
+            return values[1].toIntOrNull(16) ?: 0 // Returns pressure in kPa
+        }
+        throw Exception("Invalid barometric pressure response")
     }
 }

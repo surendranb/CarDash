@@ -41,6 +41,9 @@ class MetricViewModel(
     private val _fuelPressure = MutableStateFlow(0)
     val fuelPressure = _fuelPressure.asStateFlow()
 
+    private val _baroPressure = MutableStateFlow(0)
+    val baroPressure = _baroPressure.asStateFlow()
+
     private val _errorMessage = MutableSharedFlow<String>()
     val errorMessage = _errorMessage.asSharedFlow()
 
@@ -161,6 +164,14 @@ class MetricViewModel(
         viewModelScope.launch {
             obdService.fuelPressureFlow.collect { pressure ->
                 _fuelPressure.value = pressure
+            }
+        }
+    }
+
+    private fun startBaroPressureCollection() {
+        viewModelScope.launch {
+            obdService.baroPressureFlow.collect { pressure ->
+                _baroPressure.value = pressure
             }
         }
     }

@@ -44,6 +44,7 @@ Android app for OBD2 vehicle diagnostics with real-time metrics and trip history
 | feat: Implement fuel level metric | 5f09ce4 | 04/06/2025 |
 | feat: Implement intake air temperature metric | e765c02 | 04/06/2025 |
 | feat: Implement throttle position metric | a3d7a0a | 04/06/2025 |
+| feat: Implement fuel pressure metric | 9fbd12a | 04/06/2025 |
 
 ## Development Process
 1. Code changes must be built and verified with './gradlew assembleDebug' before commit

@@ -1,4 +1,4 @@
-package com.example.cardash.ui.metrics
+Greatpackage com.example.cardash.ui.metrics
 
 // Removed duplicate import
 import androidx.compose.foundation.layout.padding
@@ -18,6 +18,7 @@ import com.example.cardash.ui.metrics.IntakeAirTempMetricCard
 import com.example.cardash.ui.metrics.MetricViewModel
 import com.example.cardash.ui.metrics.ThrottlePositionMetricCard
 import com.example.cardash.ui.metrics.FuelPressureMetricCard
+import com.example.cardash.ui.metrics.BaroPressureMetricCard
 
 @Composable
 fun MetricGridScreen(
@@ -32,6 +33,7 @@ fun MetricGridScreen(
 
     val throttlePosition by viewModel.throttlePosition.collectAsState()
     val fuelPressure by viewModel.fuelPressure.collectAsState()
+    val baroPressure by viewModel.baroPressure.collectAsState()
 
     val metrics = listOf(
         MetricData("RPM", rpm.toString(), "rpm", MetricStatus.NORMAL),
@@ -41,7 +43,8 @@ fun MetricGridScreen(
         MetricData("FUEL", fuelLevel.toString(), "%", MetricStatus.NORMAL),
         MetricData("IAT", intakeAirTemp.toString(), "°C", MetricStatus.NORMAL),
         MetricData("THROTTLE", throttlePosition.toString(), "%", MetricStatus.NORMAL),
-        MetricData("FUEL PRESS", fuelPressure.toString(), "kPa", MetricStatus.NORMAL)
+        MetricData("FUEL PRESS", fuelPressure.toString(), "kPa", MetricStatus.NORMAL),
+        MetricData("BARO PRESS", baroPressure.toString(), "kPa", MetricStatus.NORMAL)
     )
 
     LazyVerticalGrid(
@@ -49,12 +52,18 @@ fun MetricGridScreen(
         modifier = Modifier.padding(16.dp)
     ) {
         items(metrics) { metric ->
-            MetricCard(
-                title = metric.title,
-                value = metric.value,
-                unit = metric.unit,
-                status = metric.status
-            )
+            when (metric.title) {
+                "BARO PRESS" -> BaroPressureMetricCard(
+                    pressure = metric.value.toInt(),
+                    modifier = Modifier.padding(8.dp)
+                )
+                else -> MetricCard(
+                    title = metric.title,
+                    value = metric.value,
+                    unit = metric.unit,
+                    status = metric.status
+                )
+            }
         }
     }
 }
