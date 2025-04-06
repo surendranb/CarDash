@@ -161,6 +161,7 @@ class OBDService(
         private const val SPEED_COMMAND = "01 0D"
         private const val ENGINE_LOAD_COMMAND = "01 04"
         private const val COOLANT_TEMP_COMMAND = "01 05"
+        private const val FUEL_LEVEL_COMMAND = "01 2F"
     }
 
     suspend fun getEngineLoad(): Int {
@@ -223,5 +224,31 @@ class OBDService(
             return (values[1].toIntOrNull(16) ?: 0) - 40 // Convert to °C
         }
         throw Exception("Invalid coolant temp response")
+    }
+
+    val fuelLevelFlow: Flow<Int> = flow {
+        while (isRunning) {
+            try {
+                emit(getFuelLevel())
+                delay(5000) // Poll every 5 seconds
+            } catch (e: Exception) {
+                // Handle errors
+            }
+        }
+    }.catch { e ->
+        // Handle flow errors
+    }
+
+    suspend fun getFuelLevel(): Int {
+        val response = sendCommand(FUEL_LEVEL_COMMAND)
+        return parseFuelLevelResponse(response)
+    }
+
+    private fun parseFuelLevelResponse(response: String): Int {
+        val values = response.split(" ")
+        if (values.size >= 2) {
+            return (values[1].toIntOrNull(16) ?: 0) * 100 / 255 // Convert to percentage
+        }
+        throw Exception("Invalid fuel level response")
     }
 }

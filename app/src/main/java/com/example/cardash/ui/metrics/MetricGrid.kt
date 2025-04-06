@@ -23,12 +23,14 @@ fun MetricGridScreen(
     val engineLoad by viewModel.engineLoad.collectAsState()
     val speed by viewModel.speed.collectAsState()
     val coolantTemp by viewModel.coolantTemp.collectAsState()
+    val fuelLevel by viewModel.fuelLevel.collectAsState()
 
     val metrics = listOf(
         MetricData("RPM", rpm.toString(), "rpm", MetricStatus.NORMAL),
         MetricData("Engine Load", "$engineLoad%", "", MetricStatus.NORMAL),
         MetricData("Speed", speed.toString(), "km/h", MetricStatus.NORMAL),
-        MetricData("COOLANT", coolantTemp.toString(), "°C", MetricStatus.NORMAL)
+        MetricData("COOLANT", coolantTemp.toString(), "°C", MetricStatus.NORMAL),
+        MetricData("FUEL", fuelLevel.toString(), "%", MetricStatus.NORMAL)
     )
 
     LazyVerticalGrid(

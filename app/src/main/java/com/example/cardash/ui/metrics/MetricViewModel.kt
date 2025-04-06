@@ -29,6 +29,9 @@ class MetricViewModel(
     private val _coolantTemp = MutableStateFlow(0)
     val coolantTemp = _coolantTemp.asStateFlow()
 
+    private val _fuelLevel = MutableStateFlow(0)
+    val fuelLevel = _fuelLevel.asStateFlow()
+
     private val _errorMessage = MutableSharedFlow<String>()
     val errorMessage = _errorMessage.asSharedFlow()
 
@@ -44,6 +47,7 @@ class MetricViewModel(
                     startRpmCollection()
                     startSpeedCollection()
                     startCoolantTempCollection()
+                    startFuelLevelCollection()
                 }
                 is OBDService.ConnectionResult.Error -> {
                     _connectionState.value = ConnectionState.Failed(result.message)
@@ -114,6 +118,14 @@ class MetricViewModel(
         viewModelScope.launch {
             obdService.coolantTempFlow.collect { temp ->
                 _coolantTemp.value = temp
+            }
+        }
+    }
+
+    private fun startFuelLevelCollection() {
+        viewModelScope.launch {
+            obdService.fuelLevelFlow.collect { level ->
+                _fuelLevel.value = level
             }
         }
     }
