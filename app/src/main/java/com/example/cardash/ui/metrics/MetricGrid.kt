@@ -11,22 +11,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel // Import viewModel
+import androidx.compose.runtime.collectAsState
 import com.example.cardash.ui.components.MetricCard
 import com.example.cardash.ui.components.MetricStatus
 
 @Composable
 fun MetricGridScreen(
-    viewModel: MetricViewModel = viewModel() // Inject ViewModel
+    viewModel: MetricViewModel = viewModel() // Get ViewModel
 ) {
-    val rpm by viewModel.rpm.collectAsState() // Collect RPM state
+    val rpm by viewModel.rpm.collectAsState()
+    val engineLoad by viewModel.engineLoad.collectAsState()
 
-    // TODO: Replace other hardcoded metrics later
     val metrics = listOf(
-        // Determine RPM status based on value later, for now NORMAL
-        MetricData("RPM", rpm.toString(), "rpm", MetricStatus.NORMAL), // Use collected RPM, default status NORMAL
-        MetricData("Speed", "---", "km/h", MetricStatus.NORMAL), // Placeholder, use NORMAL
-        MetricData("Coolant", "---", "°C", MetricStatus.NORMAL), // Placeholder, use NORMAL
-        MetricData("Voltage", "---", "V", MetricStatus.NORMAL) // Placeholder, use NORMAL
+        MetricData("RPM", rpm.toString(), "rpm", MetricStatus.NORMAL),
+        MetricData("Engine Load", "$engineLoad%", "", MetricStatus.NORMAL)
     )
 
     LazyVerticalGrid(

@@ -30,6 +30,20 @@ class OBDService(
         // Handle flow errors
     }
 
+    // Engine Load polling flow  
+    val engineLoadFlow: Flow<Int> = flow {
+        while (isRunning) {
+            try {
+                emit(getEngineLoad())
+                delay(1000) // Poll every second
+            } catch (e: Exception) {
+                // Handle errors
+            }
+        }
+    }.catch { e ->
+        // Handle flow errors
+    }
+
     // RPM polling flow
     val rpmFlow: Flow<Int> = flow {
         while (isRunning) {
