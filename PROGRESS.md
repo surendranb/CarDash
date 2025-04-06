@@ -64,6 +64,7 @@ Android app for OBD2 vehicle diagnostics with real-time metrics and trip history
 2. Fuel Pressure (PID 010A) - Important fuel system indicator  
 3. Barometric Pressure (PID 0133) - Key atmospheric reading
 4. Timing Advance (PID 010E) - Shows ignition timing adjustment
+5. Battery Voltage (PID 0142) - Control module voltage monitoring
 
 ## Future Enhancements
 1. Cloud sync

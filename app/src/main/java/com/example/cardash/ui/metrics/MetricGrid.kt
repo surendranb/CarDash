@@ -36,6 +36,8 @@ fun MetricGridScreen(
     val fuelPressure by viewModel.fuelPressure.collectAsState()
     val baroPressure by viewModel.baroPressure.collectAsState()
 
+    val batteryVoltage by viewModel.batteryVoltage.collectAsState()
+
     val metrics = listOf(
         MetricData("RPM", rpm.toString(), "rpm", MetricStatus.NORMAL),
         MetricData("Engine Load", "$engineLoad%", "", MetricStatus.NORMAL),
@@ -45,7 +47,8 @@ fun MetricGridScreen(
         MetricData("IAT", intakeAirTemp.toString(), "°C", MetricStatus.NORMAL),
         MetricData("THROTTLE", throttlePosition.toString(), "%", MetricStatus.NORMAL),
         MetricData("FUEL PRESS", fuelPressure.toString(), "kPa", MetricStatus.NORMAL),
-        MetricData("BARO PRESS", baroPressure.toString(), "kPa", MetricStatus.NORMAL)
+        MetricData("BARO PRESS", baroPressure.toString(), "kPa", MetricStatus.NORMAL),
+        MetricData("BATTERY", "%.1f".format(batteryVoltage), "V", MetricStatus.NORMAL)
     )
 
     LazyVerticalGrid(
