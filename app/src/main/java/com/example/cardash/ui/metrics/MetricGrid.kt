@@ -1,4 +1,4 @@
-Greatpackage com.example.cardash.ui.metrics
+package com.example.cardash.ui.metrics
 
 // Removed duplicate import
 import androidx.compose.foundation.layout.padding
