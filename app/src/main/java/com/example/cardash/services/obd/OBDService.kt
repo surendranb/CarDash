@@ -160,7 +160,7 @@ class OBDService(
     companion object {
         private const val SPEED_COMMAND = "01 0D"
         private const val ENGINE_LOAD_COMMAND = "01 04"
-        private const val VEHICLE_SPEED_COMMAND = "01 0D"
+        private const val COOLANT_TEMP_COMMAND = "01 05"
     }
 
     suspend fun getEngineLoad(): Int {
@@ -197,5 +197,31 @@ class OBDService(
             return ((byteA * 256) + byteB) / 4 // Convert to RPM
         }
         throw Exception("Invalid RPM response")
+    }
+
+    val coolantTempFlow: Flow<Int> = flow {
+        while (isRunning) {
+            try {
+                emit(getCoolantTemp())
+                delay(2000) // Poll every 2 seconds
+            } catch (e: Exception) {
+                // Handle errors
+            }
+        }
+    }.catch { e ->
+        // Handle flow errors
+    }
+
+    suspend fun getCoolantTemp(): Int {
+        val response = sendCommand(COOLANT_TEMP_COMMAND)
+        return parseCoolantTempResponse(response)
+    }
+
+    private fun parseCoolantTempResponse(response: String): Int {
+        val values = response.split(" ")
+        if (values.size >= 2) {
+            return (values[1].toIntOrNull(16) ?: 0) - 40 // Convert to °C
+        }
+        throw Exception("Invalid coolant temp response")
     }
 }

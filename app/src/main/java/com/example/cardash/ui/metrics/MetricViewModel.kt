@@ -26,6 +26,9 @@ class MetricViewModel(
     private val _speed = MutableStateFlow(0)
     val speed = _speed.asStateFlow()
 
+    private val _coolantTemp = MutableStateFlow(0)
+    val coolantTemp = _coolantTemp.asStateFlow()
+
     private val _errorMessage = MutableSharedFlow<String>()
     val errorMessage = _errorMessage.asSharedFlow()
 
@@ -40,6 +43,7 @@ class MetricViewModel(
                     _errorMessage.emit("Successfully connected to OBD2 adapter")
                     startRpmCollection()
                     startSpeedCollection()
+                    startCoolantTempCollection()
                 }
                 is OBDService.ConnectionResult.Error -> {
                     _connectionState.value = ConnectionState.Failed(result.message)
@@ -102,6 +106,14 @@ class MetricViewModel(
         viewModelScope.launch {
             obdService.speedFlow.collect { speed ->
                 _speed.value = speed
+            }
+        }
+    }
+
+    private fun startCoolantTempCollection() {
+        viewModelScope.launch {
+            obdService.coolantTempFlow.collect { temp ->
+                _coolantTemp.value = temp
             }
         }
     }
