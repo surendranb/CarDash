@@ -23,8 +23,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.platform.LocalContext // Import LocalContext
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.core.app.ActivityCompat
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import android.content.pm.PackageManager
+import android.bluetooth.BluetoothDevice
+import com.example.cardash.services.obd.BluetoothManager
 import com.example.cardash.CarDashApp // Import CarDashApp
 import com.example.cardash.ui.graphs.GraphScreen
 import com.example.cardash.ui.metrics.MetricGridScreen
@@ -34,14 +45,30 @@ import com.example.cardash.ui.theme.CarDashTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
-    val app = LocalContext.current.applicationContext as CarDashApp // Get CarDashApp instance
-    val factory = MetricViewModelFactory(app.obdService) // Create ViewModelFactory
-    val viewModel: MetricViewModel = viewModel(factory = factory) // Use factory to create ViewModel
+fun MainScreen(
+    onPermissionNeeded: () -> Unit = {}
+) {
+    val app = LocalContext.current.applicationContext as CarDashApp
+    val factory = MetricViewModelFactory(app.obdService)
+    val viewModel: MetricViewModel = viewModel(factory = factory)
+    val bluetoothManager = app.bluetoothManager
 
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Metrics", "Graphs")
     val connectionState by viewModel.connectionState.collectAsState()
+    var showDeviceDialog by remember { mutableStateOf(false) }
+    val devices by remember { mutableStateOf(bluetoothManager.getPairedDevices()) }
+
+    // Check permissions when trying to connect
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        if (!bluetoothManager.isBluetoothEnabled() || 
+            BluetoothManager.REQUIRED_PERMISSIONS.any { permission ->
+                ActivityCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED
+            }) {
+            onPermissionNeeded()
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // App header
@@ -57,7 +84,10 @@ fun MainScreen() {
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
-            ConnectionStatusText(connectionState = connectionState)
+            ConnectionStatusText(
+                connectionState = connectionState,
+                onClick = { showDeviceDialog = true }
+            )
         }
 
         // Tabs
@@ -80,7 +110,10 @@ fun MainScreen() {
 }
 
 @Composable
-fun ConnectionStatusText(connectionState: MetricViewModel.ConnectionState) {
+fun ConnectionStatusText(
+    connectionState: MetricViewModel.ConnectionState,
+    onClick: () -> Unit = {}
+) {
     val statusText = when (connectionState) {
         is MetricViewModel.ConnectionState.Connected -> "Connected"
         is MetricViewModel.ConnectionState.Connecting -> "Connecting..."
@@ -98,10 +131,43 @@ fun ConnectionStatusText(connectionState: MetricViewModel.ConnectionState) {
     Text(
         text = statusText,
         color = statusColor,
-        modifier = Modifier.padding(start = 8.dp)
+        modifier = Modifier
+            .padding(start = 8.dp)
+            .clickable(onClick = onClick)
     )
 }
 
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DeviceSelectionDialog(
+    devices: Set<BluetoothDevice>,
+    onDeviceSelected: (BluetoothDevice) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Select OBD2 Adapter") },
+        text = {
+            LazyColumn {
+                items(devices.toList().toTypedArray()) { device ->
+                    Text(
+                        text = device.name ?: "Unknown Device (${device.address})",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onDeviceSelected(device) }
+                            .padding(16.dp)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
 
 @Preview(showBackground = true)
 @Composable
