@@ -14,6 +14,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel // Import viewModel
 import androidx.compose.runtime.collectAsState
 import com.example.cardash.ui.components.MetricCard
 import com.example.cardash.ui.components.MetricStatus
+import com.example.cardash.ui.metrics.IntakeAirTempMetricCard
+import com.example.cardash.ui.metrics.MetricViewModel
 
 @Composable
 fun MetricGridScreen(
@@ -24,13 +26,15 @@ fun MetricGridScreen(
     val speed by viewModel.speed.collectAsState()
     val coolantTemp by viewModel.coolantTemp.collectAsState()
     val fuelLevel by viewModel.fuelLevel.collectAsState()
+    val intakeAirTemp by viewModel.intakeAirTemp.collectAsState()
 
     val metrics = listOf(
         MetricData("RPM", rpm.toString(), "rpm", MetricStatus.NORMAL),
         MetricData("Engine Load", "$engineLoad%", "", MetricStatus.NORMAL),
         MetricData("Speed", speed.toString(), "km/h", MetricStatus.NORMAL),
         MetricData("COOLANT", coolantTemp.toString(), "°C", MetricStatus.NORMAL),
-        MetricData("FUEL", fuelLevel.toString(), "%", MetricStatus.NORMAL)
+        MetricData("FUEL", fuelLevel.toString(), "%", MetricStatus.NORMAL),
+        MetricData("IAT", intakeAirTemp.toString(), "°C", MetricStatus.NORMAL)
     )
 
     LazyVerticalGrid(

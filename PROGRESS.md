@@ -41,6 +41,7 @@ Android app for OBD2 vehicle diagnostics with real-time metrics and trip history
 | Modular UI components | 954fa8d | 04/05/2025 |
 | Color scheme update | 9534c8a | 04/05/2025 |
 | Fix: ViewModel injection | f625e0f | 04/05/2025 |
+| feat: Implement fuel level metric | 5f09ce4 | 04/06/2025 |
 
 ## Development Process
 1. Code changes must be built and verified with './gradlew assembleDebug' before commit
