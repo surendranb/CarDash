@@ -23,6 +23,9 @@ class MetricViewModel(
     private val _engineLoad = MutableStateFlow(0)
     val engineLoad = _engineLoad.asStateFlow()
 
+    private val _speed = MutableStateFlow(0)
+    val speed = _speed.asStateFlow()
+
     private val _errorMessage = MutableSharedFlow<String>()
     val errorMessage = _errorMessage.asSharedFlow()
 
@@ -36,6 +39,7 @@ class MetricViewModel(
                     _connectionState.value = ConnectionState.Connected
                     _errorMessage.emit("Successfully connected to OBD2 adapter")
                     startRpmCollection()
+                    startSpeedCollection()
                 }
                 is OBDService.ConnectionResult.Error -> {
                     _connectionState.value = ConnectionState.Failed(result.message)
@@ -92,6 +96,14 @@ class MetricViewModel(
 
     fun checkPermissions(): String? {
         return null // OBDService doesn't have checkPermissions()
+    }
+
+    private fun startSpeedCollection() {
+        viewModelScope.launch {
+            obdService.speedFlow.collect { speed ->
+                _speed.value = speed
+            }
+        }
     }
 
     sealed class ConnectionState {

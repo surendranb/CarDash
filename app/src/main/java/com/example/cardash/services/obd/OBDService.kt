@@ -16,20 +16,6 @@ class OBDService(
     private var outputStream: OutputStream? = null
     private var isRunning = false
 
-    // Speed polling flow  
-    val speedFlow: Flow<Int> = flow {
-        while (isRunning) {
-            try {
-                emit(getSpeed())
-                delay(1000) // Poll every second
-            } catch (e: Exception) {
-                // Handle errors
-            }
-        }
-    }.catch { e ->
-        // Handle flow errors
-    }
-
     // Engine Load polling flow  
     val engineLoadFlow: Flow<Int> = flow {
         while (isRunning) {
@@ -55,6 +41,19 @@ class OBDService(
             }
         }
     }.catch { e -> 
+        // Handle flow errors
+    }
+
+    val speedFlow: Flow<Int> = flow {
+        while (isRunning) {
+            try {
+                emit(getSpeed())
+                delay(1000) // Poll every second
+            } catch (e: Exception) {
+                // Handle errors
+            }
+        }
+    }.catch { e ->
         // Handle flow errors
     }
 
@@ -161,6 +160,7 @@ class OBDService(
     companion object {
         private const val SPEED_COMMAND = "01 0D"
         private const val ENGINE_LOAD_COMMAND = "01 04"
+        private const val VEHICLE_SPEED_COMMAND = "01 0D"
     }
 
     suspend fun getEngineLoad(): Int {
