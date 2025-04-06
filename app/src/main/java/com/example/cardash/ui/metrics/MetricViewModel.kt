@@ -44,6 +44,9 @@ class MetricViewModel(
     private val _baroPressure = MutableStateFlow(0)
     val baroPressure = _baroPressure.asStateFlow()
 
+    private val _batteryVoltage = MutableStateFlow(0f)
+    val batteryVoltage = _batteryVoltage.asStateFlow()
+
     private val _errorMessage = MutableSharedFlow<String>()
     val errorMessage = _errorMessage.asSharedFlow()
 

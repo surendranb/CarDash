@@ -163,9 +163,10 @@ class OBDService(
         private const val COOLANT_TEMP_COMMAND = "01 05"
         private const val FUEL_LEVEL_COMMAND = "01 2F"
         private const val FUEL_PRESSURE_COMMAND = "01 0A"
-        private const val BARO_PRESSURE_COMMAND = "01 33"
-        private const val INTAKE_AIR_TEMP_COMMAND = "01 0F"
-        private const val THROTTLE_POSITION_COMMAND = "01 11"
+    private const val BARO_PRESSURE_COMMAND = "01 33"
+    private const val INTAKE_AIR_TEMP_COMMAND = "01 0F"
+    private const val THROTTLE_POSITION_COMMAND = "01 11"
+    private const val BATTERY_VOLTAGE_COMMAND = "01 42"
     }
 
     suspend fun getEngineLoad(): Int {
@@ -345,6 +346,32 @@ class OBDService(
         }
     }.catch { e ->
         // Handle flow errors
+    }
+
+    val batteryVoltageFlow: Flow<Float> = flow {
+        while (isRunning) {
+            try {
+                emit(getBatteryVoltage())
+                delay(5000) // Poll every 5 seconds
+            } catch (e: Exception) {
+                // Handle errors
+            }
+        }
+    }.catch { e ->
+        // Handle flow errors
+    }
+
+    suspend fun getBatteryVoltage(): Float {
+        val response = sendCommand(BATTERY_VOLTAGE_COMMAND)
+        return parseBatteryVoltageResponse(response)
+    }
+
+    private fun parseBatteryVoltageResponse(response: String): Float {
+        val values = response.split(" ")
+        if (values.size >= 2) {
+            return values[1].toIntOrNull(16)?.let { it / 10f } ?: 0f
+        }
+        throw Exception("Invalid battery voltage response")
     }
 
     suspend fun getBaroPressure(): Int {

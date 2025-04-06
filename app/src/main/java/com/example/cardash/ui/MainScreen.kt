@@ -71,6 +71,17 @@ fun MainScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        if (showDeviceDialog) {
+            DeviceSelectionDialog(
+                devices = devices,
+                onDeviceSelected = { device ->
+                    // TODO: Handle device selection
+                    showDeviceDialog = false
+                },
+                onDismiss = { showDeviceDialog = false }
+            )
+        }
+        
         // App header
         Row(
             modifier = Modifier

@@ -46,6 +46,7 @@ Android app for OBD2 vehicle diagnostics with real-time metrics and trip history
 | feat: Implement throttle position metric | a3d7a0a | 04/06/2025 |
 | feat: Implement fuel pressure metric | 9fbd12a | 04/06/2025 |
 | feat: Add barometric pressure monitoring | b73eb01 | 04/06/2025 |
+| fix: Resolve MetricGrid issues and complete baro pressure integration | 8a27a47 | 04/06/2025 |
 
 ## Development Process
 1. Code changes must be built and verified with './gradlew assembleDebug' before commit

@@ -19,6 +19,7 @@ import com.example.cardash.ui.metrics.MetricViewModel
 import com.example.cardash.ui.metrics.ThrottlePositionMetricCard
 import com.example.cardash.ui.metrics.FuelPressureMetricCard
 import com.example.cardash.ui.metrics.BaroPressureMetricCard
+import com.example.cardash.ui.metrics.BatteryVoltageMetricCard
 
 @Composable
 fun MetricGridScreen(
