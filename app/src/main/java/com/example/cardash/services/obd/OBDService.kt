@@ -258,13 +258,27 @@ class OBDService(
     }
 
     private fun parseRPMResponse(response: String): Int {
-        val values = response.split(" ")
-        if (values.size >= 2) {
-            val byteA = values[1].toIntOrNull(16) ?: 0
-            val byteB = if (values.size > 2) values[2].toIntOrNull(16) ?: 0 else 0
-            return ((byteA * 256) + byteB) / 4 // Convert to RPM
+        // Clean the response: remove whitespace, newlines, and the '>' prompt character
+        val cleanedResponse = response.replace(Regex("[\\s\\r\\n>]"), "")
+
+        // Expected format after cleaning: 410CAB... (where A and B are hex bytes)
+        // Check if the response starts with 410C and has enough length for data bytes
+        if (cleanedResponse.startsWith("410C") && cleanedResponse.length >= 8) {
+            try {
+                val hexA = cleanedResponse.substring(4, 6)
+                val hexB = cleanedResponse.substring(6, 8)
+                val byteA = hexA.toIntOrNull(16) ?: 0
+                val byteB = hexB.toIntOrNull(16) ?: 0
+                return ((byteA * 256) + byteB) / 4 // Standard formula
+            } catch (e: NumberFormatException) {
+                throw Exception("Invalid RPM data format in response: $response", e)
+            } catch (e: IndexOutOfBoundsException) {
+                 throw Exception("Invalid RPM response length after cleaning: $cleanedResponse", e)
+            }
         }
-        throw Exception("Invalid RPM response")
+        // Log the problematic response for debugging
+        println("OBDService: Invalid RPM response received: '$response', Cleaned: '$cleanedResponse'")
+        throw Exception("Invalid or unexpected RPM response format: $response")
     }
 
     val coolantTempFlow: Flow<Int> = flow {
