@@ -9,40 +9,52 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Purple40,
-    background = Color(0xFF121212),
-    surface = Color(0xFF1E1E1E),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color.White,
-    onSurface = Color.White
+// Dark automotive theme - optimized for driving in low light
+private val DarkAutomotiveScheme = darkColorScheme(
+    primary = DashBlue,
+    primaryContainer = DashBlueDark,
+    secondary = AccentOrange,
+    tertiary = AccentCyan,
+    background = DashDarkBackground,
+    surface = DashDarkSurface,
+    surfaceVariant = DashDarkSurfaceVariant,
+    onPrimary = TextWhite,
+    onSecondary = TextWhite,
+    onTertiary = TextWhite,
+    onBackground = TextWhite,
+    onSurface = TextWhite,
+    onSurfaceVariant = TextGrey,
+    error = Error
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Purple80,
+// Light theme for daytime driving
+private val LightAutomotiveScheme = lightColorScheme(
+    primary = DashBlue,
+    primaryContainer = DashBlueLight,
+    secondary = AccentOrange,
+    tertiary = AccentCyan,
     background = Color(0xFFF8F9FA),
     surface = Color.White,
     onPrimary = Color.White,
     onSecondary = Color.Black,
     onTertiary = Color.Black,
     onBackground = Color.Black,
-    onSurface = Color.Black
+    onSurface = Color.Black,
+    error = Error
 )
 
 @Composable
 fun CarDashTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = true, // Default to dark theme for automotive
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false, // Disable dynamic color for consistent automotive look
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -50,9 +62,18 @@ fun CarDashTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        darkTheme -> DarkAutomotiveScheme
+        else -> LightAutomotiveScheme
+    }
+    
+    // Apply automotive styling to status bar
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            window.statusBarColor = DashDarkBackground.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+        }
     }
 
     MaterialTheme(

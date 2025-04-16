@@ -13,9 +13,16 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * Legacy connection service that uses the new OBDService under the hood for compatibility
+ */
 class ObdConnectionService(private val context: Context) {
-    private var isRunning = false
+    private val isRunning = AtomicBoolean(false)
+    private val bluetoothManager = BluetoothManager(context)
+    private val obdService = OBDService(bluetoothManager)
+    
     companion object {
         const val COOLANT_TEMP_COMMAND = "0105"
         
@@ -36,62 +43,30 @@ class ObdConnectionService(private val context: Context) {
     private val sppUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
 
     suspend fun connect(deviceAddress: String): ConnectionResult {
-        return withContext(Dispatchers.IO) {
-            try {
-                val device = bluetoothAdapter?.getRemoteDevice(deviceAddress)
-                    ?: return@withContext ConnectionResult.Error("Device not found")
-
-                bluetoothSocket = device.createRfcommSocketToServiceRecord(sppUUID)
-                bluetoothSocket?.connect()
-                inputStream = bluetoothSocket?.inputStream
-                outputStream = bluetoothSocket?.outputStream
-
-                // Initialize OBD connection
-                sendCommand("ATZ") // Reset
-                sendCommand("ATE0") // Echo off
-                sendCommand("ATSP0") // Set protocol auto
-
+        return when (val result = obdService.connect(deviceAddress)) {
+            is OBDService.ConnectionResult.Success -> {
+                isRunning.set(true)
+                inputStream = obdService.inputStream
+                outputStream = obdService.outputStream
                 ConnectionResult.Success
-            } catch (e: IOException) {
-                disconnect()
-                ConnectionResult.Error("Connection failed: ${e.message}")
+            }
+            is OBDService.ConnectionResult.Error -> {
+                ConnectionResult.Error(result.message)
             }
         }
     }
 
     suspend fun sendCommand(command: String): String {
-        return withContext(Dispatchers.IO) {
-            try {
-                outputStream?.write("$command\r".toByteArray())
-                outputStream?.flush()
-                val buffer = ByteArray(1024)
-                val bytes = inputStream?.read(buffer) ?: 0
-                String(buffer, 0, bytes).trim()
-            } catch (e: Exception) {
-                disconnect()
-                throw IOException("Command failed: ${e.message}")
-            }
-        }
+        return obdService.sendCommand(command)
     }
 
     suspend fun disconnect() {
-        withContext(Dispatchers.IO) {
-            try {
-                bluetoothSocket?.close()
-                inputStream?.close()
-                outputStream?.close()
-            } catch (e: IOException) {
-                // Log error
-            } finally {
-                bluetoothSocket = null
-                inputStream = null
-                outputStream = null
-            }
-        }
+        isRunning.set(false)
+        obdService.disconnect()
     }
 
     fun getPairedDevices(): Set<BluetoothDevice> {
-        return bluetoothAdapter?.bondedDevices ?: emptySet()
+        return bluetoothManager.getPairedDevices()
     }
 
     fun checkPermissions(): String? {
@@ -106,38 +81,13 @@ class ObdConnectionService(private val context: Context) {
     }
 
     fun isBluetoothEnabled(): Boolean {
-        return bluetoothAdapter?.isEnabled ?: false
+        return bluetoothManager.isBluetoothEnabled()
     }
 
-    val coolantTempFlow: Flow<Int> = flow {
-        while (isRunning) {
-            try {
-                val temp = withContext(Dispatchers.IO) { 
-                    getCoolantTemp() 
-                }
-                emit(temp)
-                delay(2000)
-            } catch (e: Exception) {
-                // Handle errors
-            }
-        }
-    }.flowOn(Dispatchers.IO)
-     .catch { e -> 
-         // Handle flow errors
-     }
+    val coolantTempFlow: Flow<Int> = obdService.coolantTempFlow
 
     private suspend fun getCoolantTemp(): Int {
-        val response = sendCommand("0105") // Coolant temp PID
-        return parseCoolantTemp(response)
-    }
-
-    private fun parseCoolantTemp(response: String): Int {
-        val values = response.split(" ")
-        return if (values.size >= 2) {
-            (values[1].toIntOrNull(16) ?: 0) - 40 // Convert to °C
-        } else {
-            0
-        }
+        return obdService.getCoolantTemp()
     }
 
     sealed class ConnectionResult {
