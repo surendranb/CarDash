@@ -23,6 +23,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,16 +40,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.core.app.ActivityCompat
 import androidx.compose.runtime.LaunchedEffect
@@ -65,7 +69,7 @@ import com.example.cardash.ui.theme.Warning
 import com.example.cardash.ui.theme.Error as ThemeError
 import com.example.cardash.ui.theme.Neutral
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalTextApi::class)
 @Composable
 fun MainScreen(
     onPermissionNeeded: () -> Unit = {}
@@ -110,7 +114,7 @@ fun MainScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.statusBars), // Use WindowInsets for proper status bar padding
-            color = MaterialTheme.colorScheme.surface,
+            color = MaterialTheme.colorScheme.primaryContainer,
             tonalElevation = 4.dp,
             shadowElevation = 2.dp
         ) {
@@ -119,7 +123,7 @@ fun MainScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                // App title
+                // App title with gradient accent
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -128,15 +132,16 @@ fun MainScreen(
                     Text(
                         text = "CarDash",
                         style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp,
-                        textAlign = TextAlign.Start
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 1.sp,
+                        textAlign = TextAlign.Start,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                // Combined status bar
+                // Combined status bar with animated background
                 CombinedStatusBar(
                     connectionState = connectionState,
                     engineRunning = engineRunning,
@@ -145,11 +150,24 @@ fun MainScreen(
             }
         }
 
-        // Tabs with improved styling
+        // Tabs with racing-inspired styling
         TabRow(
             selectedTabIndex = selectedTab,
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            divider = {
+                Divider(
+                    thickness = 2.dp,
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f)
+                )
+            },
+            indicator = { tabPositions ->
+                TabRowDefaults.Indicator(
+                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                    height = 3.dp,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
         ) {
             tabs.forEachIndexed { index, title ->
                 Tab(
@@ -163,7 +181,7 @@ fun MainScreen(
                             textAlign = TextAlign.Center
                         ) 
                     },
-                    modifier = Modifier.padding(vertical = 12.dp) // Added vertical padding
+                    modifier = Modifier.padding(vertical = 14.dp) // Increased vertical padding
                 )
             }
         }
@@ -197,14 +215,15 @@ fun CombinedStatusBar(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .clip(RoundedCornerShape(8.dp)),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        tonalElevation = 1.dp
+            .clip(RoundedCornerShape(12.dp)), // Increased corner radius
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+        tonalElevation = 2.dp,
+        shadowElevation = 1.dp
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp, horizontal = 12.dp),
+                .padding(vertical = 10.dp, horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -234,7 +253,9 @@ fun CombinedStatusBar(
                 
                 Text(
                     text = connectionStatus,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
                     color = connectionColor,
                     textAlign = TextAlign.Start
                 )
@@ -261,7 +282,9 @@ fun CombinedStatusBar(
                 
                 Text(
                     text = engineStatus,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
                     color = engineColor,
                     textAlign = TextAlign.End
                 )

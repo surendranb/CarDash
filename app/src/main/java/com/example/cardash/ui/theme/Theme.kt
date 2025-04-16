@@ -16,12 +16,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// Dark automotive theme - optimized for driving in low light
-private val DarkAutomotiveScheme = darkColorScheme(
-    primary = DashBlue,
-    primaryContainer = DashBlueDark,
-    secondary = AccentOrange,
-    tertiary = AccentCyan,
+// Racing-inspired dark theme - optimized for driving interfaces
+private val RacingDarkScheme = darkColorScheme(
+    primary = ElectricBlue,
+    primaryContainer = RacingBlue,
+    onPrimaryContainer = TextWhite,
+    secondary = PerformanceOrange,
+    secondaryContainer = Color(0xFF703500), // Dark orange
+    onSecondaryContainer = TextWhite,
+    tertiary = TechCyan,
+    tertiaryContainer = Color(0xFF004D40), // Dark teal
+    onTertiaryContainer = TextWhite,
     background = DashDarkBackground,
     surface = DashDarkSurface,
     surfaceVariant = DashDarkSurfaceVariant,
@@ -31,22 +36,30 @@ private val DarkAutomotiveScheme = darkColorScheme(
     onBackground = TextWhite,
     onSurface = TextWhite,
     onSurfaceVariant = TextGrey,
-    error = Error
+    error = Error,
+    errorContainer = Color(0xFF640000) // Dark red
 )
 
-// Light theme for daytime driving
-private val LightAutomotiveScheme = lightColorScheme(
-    primary = DashBlue,
-    primaryContainer = DashBlueLight,
-    secondary = AccentOrange,
-    tertiary = AccentCyan,
+// Light racing theme for daytime driving
+private val RacingLightScheme = lightColorScheme(
+    primary = RacingBlue,
+    primaryContainer = TurboBlue,
+    onPrimaryContainer = Color.White,
+    secondary = PerformanceOrange,
+    secondaryContainer = Color(0xFFFFD180), // Light orange
+    onSecondaryContainer = Color(0xFF703500), // Dark orange
+    tertiary = TechCyan,
+    tertiaryContainer = Color(0xFFB2EBF2), // Light cyan
+    onTertiaryContainer = Color(0xFF004D40), // Dark teal
     background = Color(0xFFF8F9FA),
     surface = Color.White,
+    surfaceVariant = Color(0xFFE0E0E0),
     onPrimary = Color.White,
     onSecondary = Color.Black,
     onTertiary = Color.Black,
     onBackground = Color.Black,
     onSurface = Color.Black,
+    onSurfaceVariant = Color(0xFF666666),
     error = Error
 )
 
@@ -62,16 +75,16 @@ fun CarDashTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        darkTheme -> DarkAutomotiveScheme
-        else -> LightAutomotiveScheme
+        darkTheme -> RacingDarkScheme
+        else -> RacingLightScheme
     }
     
-    // Apply automotive styling to status bar
+    // Apply racing-inspired styling to status bar
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = DashDarkBackground.toArgb()
+            window.statusBarColor = DarkCarbon.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
         }
     }
