@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -28,12 +31,15 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -58,11 +64,14 @@ import android.bluetooth.BluetoothDevice
 import com.example.cardash.services.obd.BluetoothManager
 import com.example.cardash.CarDashApp
 import com.example.cardash.ui.diagnostics.LogViewerScreen
-import com.example.cardash.ui.graphs.GraphScreen
+import com.example.cardash.ui.graphs.GraphScreen 
 import com.example.cardash.ui.history.HistoryScreen
 import com.example.cardash.ui.metrics.MetricGridScreen
 import com.example.cardash.ui.metrics.MetricViewModel
 import com.example.cardash.ui.metrics.MetricViewModelFactory
+import com.example.cardash.ui.settings.SettingsDialog
+import com.example.cardash.ui.settings.TabSettings
+import com.example.cardash.ui.settings.TabType
 import com.example.cardash.ui.theme.CarDashTheme
 import com.example.cardash.ui.theme.Success
 import com.example.cardash.ui.theme.Warning
@@ -78,16 +87,37 @@ fun MainScreen(
     val factory = MetricViewModelFactory(app.obdService, app.obdServiceDiagnostics)
     val viewModel: MetricViewModel = viewModel(factory = factory)
     val bluetoothManager = app.bluetoothManager
+    
+    // Tab Settings
+    val tabSettings = remember { TabSettings() }
+    val context = LocalContext.current
+    
+    // Load tab settings when the app starts
+    LaunchedEffect(Unit) {
+        tabSettings.loadSettings(context)
+    }
 
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Metrics", "Graphs", "History", "Diagnostics")
+    var showDeviceDialog by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
+    val devices by remember { mutableStateOf(bluetoothManager.getPairedDevices()) }
+    
     val connectionState by viewModel.connectionState.collectAsState()
     val engineRunning by viewModel.engineRunning.collectAsState()
-    var showDeviceDialog by remember { mutableStateOf(false) }
-    val devices by remember { mutableStateOf(bluetoothManager.getPairedDevices()) }
+    
+    // Create tabs list based on visibility settings
+    val tabs = mutableListOf<String>()
+    tabs.add("Metrics") // Always included
+    if (tabSettings.showGraphsTab) tabs.add("Graphs")
+    if (tabSettings.showDiagnosticsTab) tabs.add("Diagnostics")
+    if (tabSettings.showHistoryTab) tabs.add("History")
+    
+    // Ensure selected tab is valid after settings change
+    if (selectedTab >= tabs.size) {
+        selectedTab = 0
+    }
 
     // Check permissions when trying to connect
-    val context = LocalContext.current
     LaunchedEffect(Unit) {
         if (!bluetoothManager.isBluetoothEnabled() || 
             BluetoothManager.REQUIRED_PERMISSIONS.any { permission ->
@@ -98,6 +128,7 @@ fun MainScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        // Device selection dialog
         if (showDeviceDialog) {
             DeviceSelectionDialog(
                 devices = devices,
@@ -106,6 +137,18 @@ fun MainScreen(
                     showDeviceDialog = false
                 },
                 onDismiss = { showDeviceDialog = false }
+            )
+        }
+        
+        // Settings dialog
+        if (showSettingsDialog) {
+            SettingsDialog(
+                tabSettings = tabSettings,
+                onDismiss = { 
+                    showSettingsDialog = false
+                    // Save settings when dialog is closed
+                    tabSettings.saveSettings(context)
+                }
             )
         }
         
@@ -123,30 +166,58 @@ fun MainScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                // App title with gradient accent
+                // App title with settings button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Settings button
+                    IconButton(
+                        onClick = { showSettingsDialog = true },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                    
+                    // App title
                     Text(
                         text = "CarDash",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 1.sp,
-                        textAlign = TextAlign.Start,
+                        textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
+                    
+                    // OBD Connection button
+                    IconButton(
+                        onClick = { showDeviceDialog = true },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        // Use a simple text icon instead of vector icons
+                        // Use different colors based on connection state
+                        val iconTint = when (connectionState) {
+                            is MetricViewModel.ConnectionState.Connected -> Success
+                            is MetricViewModel.ConnectionState.Connecting -> Warning
+                            is MetricViewModel.ConnectionState.Failed -> ThemeError
+                            else -> MaterialTheme.colorScheme.onPrimaryContainer
+                        }
+                        
+                        // Use a simple text-based solution instead of vector icons
+                        Text(
+                            text = "OBD",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = iconTint,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Combined status bar with animated background
-                CombinedStatusBar(
-                    connectionState = connectionState,
-                    engineRunning = engineRunning,
-                    onClick = { showDeviceDialog = true }
-                )
             }
         }
 
@@ -162,11 +233,13 @@ fun MainScreen(
                 )
             },
             indicator = { tabPositions ->
-                TabRowDefaults.Indicator(
-                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                    height = 3.dp,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+                if (selectedTab < tabPositions.size) {
+                    TabRowDefaults.Indicator(
+                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                        height = 3.dp,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
             }
         ) {
             tabs.forEachIndexed { index, title ->
@@ -193,11 +266,15 @@ fun MainScreen(
                 .padding(bottom = 48.dp) // Add padding for OS navigation bar
                 .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal)) // Handle edge-to-edge
         ) {
-            when (selectedTab) {
-                0 -> MetricGridScreen(removeEngineStatus = true)
-                1 -> GraphScreen()
-                2 -> HistoryScreen()
-                3 -> LogViewerScreen(onBackPressed = { selectedTab = 0 })
+            // Get the tab name at the selected index
+            val currentTab = if (selectedTab < tabs.size) tabs[selectedTab] else "Metrics"
+            
+            when (currentTab) {
+                "Metrics" -> MetricGridScreen(removeEngineStatus = true)
+                "Graphs" -> GraphScreen()
+                "Diagnostics" -> LogViewerScreen(onBackPressed = { selectedTab = 0 })
+                "History" -> HistoryScreen()
+                else -> MetricGridScreen(removeEngineStatus = true) // Default fallback
             }
         }
     }
@@ -220,75 +297,40 @@ fun CombinedStatusBar(
         tonalElevation = 2.dp,
         shadowElevation = 1.dp
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 10.dp, horizontal = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            contentAlignment = Alignment.Center
         ) {
-            // OBD Connection Status
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start
-            ) {
-                val (connectionStatus, connectionColor) = when(connectionState) {
-                    is MetricViewModel.ConnectionState.Connected -> Pair(
-                        "● OBD Connected",
-                        Success
-                    )
-                    is MetricViewModel.ConnectionState.Connecting -> Pair(
-                        "◌ OBD Connecting...",
-                        Warning
-                    )
-                    is MetricViewModel.ConnectionState.Disconnected -> Pair(
-                        "○ OBD Disconnected",
-                        Neutral
-                    )
-                    is MetricViewModel.ConnectionState.Failed -> Pair(
-                        "✕ OBD Connection Failed",
-                        ThemeError
-                    )
-                }
-                
-                Text(
-                    text = connectionStatus,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                    color = connectionColor,
-                    textAlign = TextAlign.Start
+            // Only OBD Connection Status (moved to center)
+            val (connectionStatus, connectionColor) = when(connectionState) {
+                is MetricViewModel.ConnectionState.Connected -> Pair(
+                    "● OBD Connected",
+                    Success
+                )
+                is MetricViewModel.ConnectionState.Connecting -> Pair(
+                    "◌ OBD Connecting...",
+                    Warning
+                )
+                is MetricViewModel.ConnectionState.Disconnected -> Pair(
+                    "○ OBD Disconnected",
+                    Neutral
+                )
+                is MetricViewModel.ConnectionState.Failed -> Pair(
+                    "✕ OBD Connection Failed",
+                    ThemeError
                 )
             }
             
-            // Engine Status
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End
-            ) {
-                val engineStatus: String
-                val engineColor: androidx.compose.ui.graphics.Color
-                
-                if (!isConnected) {
-                    engineStatus = "○ Engine Status Unknown"
-                    engineColor = Neutral
-                } else if (engineRunning) {
-                    engineStatus = "● Engine Running"
-                    engineColor = Success
-                } else {
-                    engineStatus = "○ Engine Off"
-                    engineColor = Warning
-                }
-                
-                Text(
-                    text = engineStatus,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                    color = engineColor,
-                    textAlign = TextAlign.End
-                )
-            }
+            Text(
+                text = connectionStatus,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = connectionColor,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }

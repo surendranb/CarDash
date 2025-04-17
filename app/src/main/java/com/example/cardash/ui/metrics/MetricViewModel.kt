@@ -10,11 +10,36 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
+import java.util.Date
 
 class MetricViewModel(
     private val obdService: OBDService,
     private val obdServiceWithDiagnostics: OBDServiceWithDiagnostics
 ) : ViewModel() {
+
+    // Database access for storing combined readings
+    private val database = com.example.cardash.data.db.AppDatabase.getDatabase(
+        obdServiceWithDiagnostics.getContext()
+    )
+    private val obdLogDao = database.obdLogDao()
+    
+    // Last time we stored a combined reading (to avoid too frequent writes)
+    private var lastCombinedReadingTime = System.currentTimeMillis() - 5000 // Start 5 seconds ago
+
+    init {
+        // For MVP, we skip loading the additional metrics from database
+        /*
+        // Load initial data from database
+        viewModelScope.launch {
+            // Load fuel level history for the graph
+            updateFuelLevelHistoryFromDatabase()
+            
+            // Load average speed calculation
+            updateAverageSpeedFromDatabase()
+        }
+        */
+    }
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState = _connectionState.asStateFlow()
@@ -52,7 +77,14 @@ class MetricViewModel(
 
     private val _batteryVoltage = MutableStateFlow(0f)
     val batteryVoltage = _batteryVoltage.asStateFlow()
-
+    
+    // New metrics from database - simplified
+    private val _averageSpeed = MutableStateFlow(0)
+    val averageSpeed = _averageSpeed.asStateFlow()
+    
+    private val _fuelLevelHistory = MutableStateFlow<List<Int>>(emptyList())
+    val fuelLevelHistory = _fuelLevelHistory.asStateFlow()
+    
     private val _errorMessage = MutableSharedFlow<String>()
     val errorMessage = _errorMessage.asSharedFlow()
 
@@ -211,6 +243,8 @@ class MetricViewModel(
             _fuelPressure.value = 0
             _baroPressure.value = 0
             _batteryVoltage.value = 0f
+            _averageSpeed.value = 0
+            // Note: we don't clear fuel history so it stays visible even when disconnected
         }
     }
 
@@ -324,6 +358,9 @@ class MetricViewModel(
                         dataType = com.example.cardash.data.db.OBDDataType.SPEED
                     )
                     
+                    // Update the average speed from the database - commented out for MVP
+                    // updateAverageSpeedFromDatabase()
+                    
                     delay(1000) // Poll every second
                 } catch (e: Exception) {
                     println("Speed collection error: ${e.message}")
@@ -338,6 +375,34 @@ class MetricViewModel(
             }
         }
     }
+    
+    // Calculate and update the average speed from database - commented out for MVP
+    /*
+    private fun updateAverageSpeedFromDatabase() {
+        viewModelScope.launch {
+            try {
+                // Get all non-zero speed readings from the database
+                val readings = obdLogDao.getLastCombinedReadings(100).first()
+                
+                // Calculate average speed from all non-zero values
+                val nonZeroSpeeds = readings
+                    .mapNotNull { it.speed }
+                    .filter { it > 0 }
+                
+                val avgSpeed = if (nonZeroSpeeds.isNotEmpty()) {
+                    nonZeroSpeeds.sum() / nonZeroSpeeds.size
+                } else {
+                    0
+                }
+                
+                println("Average speed calculated from ${nonZeroSpeeds.size} readings: $avgSpeed")
+                _averageSpeed.value = avgSpeed
+            } catch (e: Exception) {
+                println("Error calculating average speed: ${e.message}")
+            }
+        }
+    }
+    */
 
     // Coolant temperature - Can read last value when engine off
     private fun startCoolantTempCollection() {
@@ -396,6 +461,9 @@ class MetricViewModel(
                         dataType = com.example.cardash.data.db.OBDDataType.FUEL_LEVEL
                     )
                     
+                    // Update fuel level history from database - commented out for MVP
+                    // updateFuelLevelHistoryFromDatabase()
+                    
                     delay(pollInterval) // Adjust polling based on engine state
                 } catch (e: Exception) {
                     println("Fuel level collection error: ${e.message}")
@@ -410,6 +478,89 @@ class MetricViewModel(
             }
         }
     }
+    
+    // Update fuel level history from database - commented out for MVP
+    /*
+    private fun updateFuelLevelHistoryFromDatabase() {
+        viewModelScope.launch {
+            try {
+                // Get readings spanning the last 7 days
+                val sevenDaysAgo = Date(System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000))
+                val now = Date()
+                
+                println("Retrieving fuel levels from ${sevenDaysAgo} to ${now}")
+                
+                // Get the readings between these dates
+                val readings = obdLogDao.getCombinedReadingsByTimeRange(
+                    startTime = sevenDaysAgo,
+                    endTime = now
+                ).first()
+                
+                println("Retrieved ${readings.size} total readings")
+                
+                // Log the first few and last few readings
+                if (readings.isNotEmpty()) {
+                    println("First 3 readings:")
+                    readings.take(3).forEach { reading ->
+                        println("  Time: ${reading.timestamp}, Fuel: ${reading.fuelLevel}, Speed: ${reading.speed}")
+                    }
+                    
+                    println("Last 3 readings:")
+                    readings.takeLast(3).forEach { reading ->
+                        println("  Time: ${reading.timestamp}, Fuel: ${reading.fuelLevel}, Speed: ${reading.speed}")
+                    }
+                }
+                
+                // Extract fuel levels, keeping only one reading per day for simplicity
+                val fuelLevelsByDay = mutableMapOf<Int, Int>()
+                var nonNullValues = 0
+                
+                for (reading in readings) {
+                    val dayOfYear = getDayOfYear(reading.timestamp)
+                    reading.fuelLevel?.let { level ->
+                        nonNullValues++
+                        // Keep the latest reading for each day
+                        fuelLevelsByDay[dayOfYear] = level
+                    }
+                }
+                
+                println("Found $nonNullValues non-null fuel level readings")
+                println("Days with readings: ${fuelLevelsByDay.keys.sorted()}")
+                
+                // Convert to ordered list
+                val fuelLevels = fuelLevelsByDay.entries
+                    .sortedBy { it.key }
+                    .map { it.value }
+                
+                println("Fuel levels over time: $fuelLevels")
+                
+                if (fuelLevels.isNotEmpty()) {
+                    _fuelLevelHistory.value = fuelLevels
+                    println("Updated fuel level history state with ${fuelLevels.size} values")
+                } else {
+                    println("WARNING: No fuel level data found for the time period!")
+                    
+                    // For testing, provide some sample data if none exists
+                    if (_fuelLevelHistory.value.isEmpty()) {
+                        val sampleData = listOf(85, 82, 76, 71, 68, 65, 62)
+                        println("Using sample data for display: $sampleData")
+                        _fuelLevelHistory.value = sampleData
+                    }
+                }
+            } catch (e: Exception) {
+                println("Error retrieving fuel level history: ${e.message}")
+                e.printStackTrace()
+            }
+        }
+    }
+    
+    // Helper function to get day of year from a date
+    private fun getDayOfYear(date: Date): Int {
+        val calendar = java.util.Calendar.getInstance()
+        calendar.time = date
+        return calendar.get(java.util.Calendar.DAY_OF_YEAR)
+    }
+    */
 
     // Intake air temp - Relevant but less dynamic when engine off
     private fun startIntakeAirTempCollection() {
@@ -502,17 +653,56 @@ class MetricViewModel(
                     }
                     
                     val command = OBDService.FUEL_PRESSURE_COMMAND
+                    println("Sending fuel pressure command: $command")
                     val response = obdService.sendCommand(command)
-                    val pressure = obdService.getFuelPressure()
-                    _fuelPressure.value = pressure
+                    println("Received fuel pressure response: $response")
                     
-                    // Log the command and response
-                    obdServiceWithDiagnostics.logCommand(
-                        command = command,
-                        response = response,
-                        parsedValue = pressure.toString(),
-                        dataType = com.example.cardash.data.db.OBDDataType.FUEL_PRESSURE
-                    )
+                    try {
+                        val pressure = obdService.getFuelPressure()
+                        println("Successfully parsed fuel pressure: $pressure kPa")
+                        _fuelPressure.value = pressure
+                        
+                        // Log the command and response
+                        obdServiceWithDiagnostics.logCommand(
+                            command = command,
+                            response = response,
+                            parsedValue = pressure.toString(),
+                            dataType = com.example.cardash.data.db.OBDDataType.FUEL_PRESSURE
+                        )
+                    } catch (pe: Exception) {
+                        // Handle parsing errors separately so we can still log the command and response
+                        println("Fuel pressure parsing error: ${pe.message}")
+                        obdServiceWithDiagnostics.logError(
+                            command = command,
+                            errorMessage = "Fuel pressure parse error: ${pe.message}",
+                            dataType = com.example.cardash.data.db.OBDDataType.FUEL_PRESSURE
+                        )
+                        
+                        // Try to extract a value using a fallback method
+                        try {
+                            // Extract any hex values that might be in the response
+                            val hexPattern = "([0-9A-F]{2})".toRegex(RegexOption.IGNORE_CASE)
+                            val matches = hexPattern.findAll(response).map { it.value }.toList()
+                            
+                            // If we have some hex values, use the one most likely to be fuel pressure
+                            if (matches.size >= 3) {
+                                // Try to find a position after "0A" or similar
+                                for (i in 0 until matches.size - 1) {
+                                    if (matches[i].equals("0A", ignoreCase = true)) {
+                                        val valueHex = matches[i + 1]
+                                        val value = valueHex.toIntOrNull(16) ?: 0
+                                        val kPa = value * 3
+                                        println("Fallback parsed fuel pressure: $kPa kPa")
+                                        _fuelPressure.value = kPa
+                                        break
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // If even the fallback fails, just log and continue
+                            println("Fallback fuel pressure parsing failed: ${e.message}")
+                        }
+                    }
                     
                     delay(2000) // Poll every 2 seconds
                 } catch (e: Exception) {
@@ -572,15 +762,6 @@ class MetricViewModel(
         class Failed(val message: String) : ConnectionState()
     }
     
-    // Database access for storing combined readings
-    private val database = com.example.cardash.data.db.AppDatabase.getDatabase(
-        obdServiceWithDiagnostics.getContext()
-    )
-    private val obdLogDao = database.obdLogDao()
-    
-    // Last time we stored a combined reading (to avoid too frequent writes)
-    private var lastCombinedReadingTime = System.currentTimeMillis() - 5000 // Start 5 seconds ago
-    
     // Store all current metrics as a combined reading
     private suspend fun storeCombinedReading() {
         val currentTime = System.currentTimeMillis()
@@ -606,6 +787,11 @@ class MetricViewModel(
             try {
                 obdLogDao.insertCombinedReading(combinedReading)
                 println("Stored combined reading: $combinedReading")
+                
+                // After storing a new reading, update our derived metrics from the database
+                // Commented out for MVP
+                // updateAverageSpeedFromDatabase()
+                // updateFuelLevelHistoryFromDatabase()
             } catch (e: Exception) {
                 println("Failed to store combined reading: ${e.message}")
                 _errorMessage.emit("Database error: ${e.message}")

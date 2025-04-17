@@ -42,6 +42,11 @@ fun MetricGridScreen(
     val baroPressure by viewModel.baroPressure.collectAsState()
     val batteryVoltage by viewModel.batteryVoltage.collectAsState()
     
+    // New metric values - simplified
+    // We're not using these for now
+    // val averageSpeed by viewModel.averageSpeed.collectAsState()
+    // val fuelLevelHistory by viewModel.fuelLevelHistory.collectAsState()
+    
     // Get engine state
     val engineRunning by viewModel.engineRunning.collectAsState()
     val connectionState by viewModel.connectionState.collectAsState()
@@ -125,10 +130,27 @@ fun TabletMetricGrid(
     baroPressure: Int,
     isConnected: Boolean
 ) {
+    // Get engine state from the ViewModel
+    val viewModel: MetricViewModel = viewModel()
+    val engineRunning by viewModel.engineRunning.collectAsState()
+
     // Use CompactMetricCard for more efficient space usage on tablets
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
+        // Tiny status indicators in the top left
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            contentAlignment = Alignment.TopStart
+        ) {
+            TinyStatusIndicators(
+                engineRunning = engineRunning,
+                isConnected = isConnected
+            )
+        }
+        
         // Top row - Primary metrics (3 columns)
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -270,14 +292,9 @@ fun TabletMetricGrid(
                 modifier = Modifier.weight(1f)
             )
             
-            // Fuel Pressure (Value)
-            val fuelPressureStatus = getMetricStatus(fuelPressure.toDouble(), 0.0, 250.0, 400.0, 500.0)
-            
-            MetricCard(
-                title = "FUEL PRESS",
-                value = fuelPressure.toString(),
-                unit = "kPa",
-                status = fuelPressureStatus,
+            // Fuel Pressure (Value) - Using dedicated component
+            FuelPressureMetricCard(
+                pressure = fuelPressure,
                 isConnected = isConnected,
                 modifier = Modifier.weight(1f)
             )
@@ -314,11 +331,28 @@ fun PhoneMetricGrid(
     baroPressure: Int,
     isConnected: Boolean
 ) {
+    // Get engine state from the ViewModel
+    val viewModel: MetricViewModel = viewModel()
+    val engineRunning by viewModel.engineRunning.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
     ) {
+        // Tiny status indicators in the top left
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            contentAlignment = Alignment.TopStart
+        ) {
+            TinyStatusIndicators(
+                engineRunning = engineRunning,
+                isConnected = isConnected
+            )
+        }
+        
         // Primary metrics row (RPM and Speed)
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -469,14 +503,9 @@ fun PhoneMetricGrid(
                 modifier = Modifier.weight(1f)
             )
             
-            // Fuel Pressure (Value)
-            val fuelPressureStatus = getMetricStatus(fuelPressure.toDouble(), 0.0, 250.0, 400.0, 500.0)
-            
-            MetricCard(
-                title = "FUEL PRESS",
-                value = fuelPressure.toString(),
-                unit = "kPa",
-                status = fuelPressureStatus,
+            // Fuel Pressure (Value) - Using dedicated component
+            FuelPressureMetricCard(
+                pressure = fuelPressure,
                 isConnected = isConnected,
                 modifier = Modifier.weight(1f)
             )

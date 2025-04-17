@@ -489,14 +489,60 @@ class OBDService(
     }
 
     private fun parseFuelPressureResponse(response: String): Int {
-        // Look for the pattern "41 0A XX" where XX is the hex value
-        val pattern = "(?:41 0A|410A) ?([0-9A-F]{2})".toRegex(RegexOption.IGNORE_CASE)
-        val matchResult = pattern.find(response)
-            ?: throw Exception("Invalid fuel pressure response format: $response")
-            
-        val hexValue = matchResult.groupValues[1]
-        val value = hexValue.toIntOrNull(16) ?: 0
-        return value * 3  // Convert to kPa (0-765 kPa)
+        println("Raw fuel pressure response: $response")
+        
+        // More flexible pattern to handle different response formats
+        // First try the standard format with spaces
+        val pattern1 = "(?:41 0A|410A) ?([0-9A-F]{2})".toRegex(RegexOption.IGNORE_CASE)
+        val matchResult1 = pattern1.find(response)
+        
+        if (matchResult1 != null) {
+            val hexValue = matchResult1.groupValues[1]
+            val value = hexValue.toIntOrNull(16) ?: 0
+            val kPa = value * 3  // Convert to kPa (0-765 kPa)
+            println("Parsed fuel pressure: $kPa kPa from hex $hexValue")
+            return kPa
+        }
+        
+        // Try an alternative format that might be used by some ELM adapters
+        val pattern2 = "(?:410A)([0-9A-F]{2})".toRegex(RegexOption.IGNORE_CASE)
+        val matchResult2 = pattern2.find(response)
+        
+        if (matchResult2 != null) {
+            val hexValue = matchResult2.groupValues[1]
+            val value = hexValue.toIntOrNull(16) ?: 0
+            val kPa = value * 3  // Convert to kPa (0-765 kPa)
+            println("Parsed fuel pressure (alt format): $kPa kPa from hex $hexValue")
+            return kPa
+        }
+        
+        // If all else fails, try to extract values directly from the string
+        // Look for response segments that might contain the data
+        val segments = response.split("\r", "\n", ">")
+        for (segment in segments) {
+            val trimmed = segment.trim()
+            if (trimmed.startsWith("41", ignoreCase = true) && 
+                (trimmed.contains("0A", ignoreCase = true) || trimmed.contains("0a", ignoreCase = true))) {
+                
+                // Extract all hex values and try to find our value
+                val hexValues = "[0-9A-Fa-f]{2}".toRegex().findAll(trimmed).map { it.value }.toList()
+                if (hexValues.size >= 3) { // At least 3 values (41, 0A, XX)
+                    // The value should be the one after "0A"
+                    for (i in 0 until hexValues.size - 1) {
+                        if (hexValues[i].equals("0A", ignoreCase = true) || hexValues[i].equals("0a", ignoreCase = true)) {
+                            val valueHex = hexValues[i + 1]
+                            val value = valueHex.toIntOrNull(16) ?: 0
+                            val kPa = value * 3  // Convert to kPa (0-765 kPa)
+                            println("Parsed fuel pressure (fallback): $kPa kPa from hex $valueHex")
+                            return kPa
+                        }
+                    }
+                }
+            }
+        }
+        
+        println("Failed to parse fuel pressure response after all attempts: $response")
+        throw Exception("Invalid fuel pressure response format: $response")
     }
 
     suspend fun getBatteryVoltage(): Float {

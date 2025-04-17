@@ -88,4 +88,19 @@ interface OBDLogDao {
     // Clean up old combined readings
     @Query("DELETE FROM obd_combined_readings WHERE timestamp < :cutoffDate")
     suspend fun deleteOldCombinedReadings(cutoffDate: Date)
+    
+    // === NEW METRICS METHODS ===
+    
+    // Get fuel levels for the depletion graph (last N readings)
+    @Query("SELECT fuelLevel FROM obd_combined_readings ORDER BY timestamp DESC LIMIT :limit")
+    fun getFuelLevelHistory(limit: Int = 12): Flow<List<Int>>
+    
+    // Get average speed from recent readings (non-zero values only)
+    @Query("SELECT AVG(speed) FROM obd_combined_readings WHERE speed > 0 AND timestamp > :sinceTime")
+    fun getAverageSpeedSince(sinceTime: Date): Flow<Int?>
+    
+    // Get fuel consumption rate (% per hour based on recent readings)
+    @Query("SELECT fuelLevel, timestamp FROM obd_combined_readings WHERE timestamp > :sinceTime ORDER BY timestamp ASC")
+    fun getFuelLevelReadingsSince(sinceTime: Date): Flow<List<FuelLevelReading>>
+
 }

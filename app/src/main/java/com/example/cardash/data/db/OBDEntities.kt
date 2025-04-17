@@ -20,6 +20,12 @@ data class OBDLogEntry(
     val errorMessage: String? = null
 )
 
+// Projection class for fuel level readings (for Room query)
+data class FuelLevelReading(
+    val fuelLevel: Int,
+    val timestamp: Date
+)
+
 enum class OBDDataType {
     RPM,
     SPEED,
