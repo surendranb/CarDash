@@ -88,22 +88,83 @@ class MetricViewModel(
     private val _errorMessage = MutableSharedFlow<String>()
     val errorMessage = _errorMessage.asSharedFlow()
 
-    // Engine state check - separate function that can be used by all metrics
+    // Engine state check with improved detection and confirmation
     private suspend fun checkEngineRunning(): Boolean {
         try {
+            // First check using RPM as primary indicator
             val command = "01 0C" // RPM command
             val response = obdService.sendCommand(command)
             val rpmValue = parseRpm(response)
             
-            // Update engine state based on RPM
-            val isRunning = rpmValue > 0
-            _engineRunning.value = isRunning
+            // Get current engine state
+            val currentEngineState = _engineRunning.value
             
-            return isRunning
+            // Determine new state based on RPM
+            val newEngineState = rpmValue > 0
+            
+            // If state is changing from running to off, do additional verification
+            if (currentEngineState && !newEngineState) {
+                println("Engine may be turning off. RPM: $rpmValue. Verifying...")
+                
+                // Additional checks to confirm engine is truly off
+                try {
+                    // Check throttle position as secondary indicator
+                    val throttleCommand = OBDService.THROTTLE_POSITION_COMMAND
+                    val throttleResponse = obdService.sendCommand(throttleCommand)
+                    val throttleValue = obdService.getThrottlePosition()
+                    
+                    // If throttle shows activity but RPM is zero, could be a bad RPM reading
+                    if (throttleValue > 3) {
+                        println("Throttle position is $throttleValue% but RPM is zero - inconsistent readings")
+                        
+                        // Double-check RPM with a second reading
+                        delay(500) // Short delay
+                        val confirmResponse = obdService.sendCommand(command)
+                        val confirmRpm = parseRpm(confirmResponse)
+                        
+                        if (confirmRpm > 0) {
+                            // RPM now shows activity - keep engine state as running
+                            println("Confirmed engine still running. Second RPM check: $confirmRpm")
+                            return true
+                        }
+                    }
+                } catch (e: Exception) {
+                    // If secondary check fails, fall back to RPM reading
+                    println("Secondary engine check failed: ${e.message}")
+                }
+                
+                // If we get here, engine is confirmed to be off
+                println("Confirmed engine turned OFF")
+                
+                // Reset all dynamic metrics to zero
+                resetDynamicMetrics()
+            }
+            
+            // Update the engine state value
+            _engineRunning.value = newEngineState
+            
+            // Log state changes
+            if (currentEngineState != newEngineState) {
+                println("Engine state changed to: ${if (newEngineState) "RUNNING" else "OFF"}")
+            }
+            
+            return newEngineState
         } catch (e: Exception) {
             println("Error checking engine state: ${e.message}")
             return false
         }
+    }
+    
+    // Reset all metrics that should be zero when engine is off
+    private fun resetDynamicMetrics() {
+        println("Resetting dynamic metrics to zero")
+        _rpm.value = 0
+        _engineLoad.value = 0
+        _speed.value = 0
+        _throttlePosition.value = 0
+        _fuelPressure.value = 0
+        // We don't reset these as they can have valid non-zero values when engine is off
+        // _coolantTemp, _intakeAirTemp, _baroPressure, _fuelLevel, _batteryVoltage
     }
 
     fun connectToDevice(deviceAddress: String) {
@@ -119,6 +180,9 @@ class MetricViewModel(
                     // First check engine status
                     val engineRunning = checkEngineRunning()
                     println("Initial engine status: ${if (engineRunning) "Running" else "Off"}")
+                    
+                    // Start periodic engine state monitoring
+                    startEngineStateMonitoring()
                     
                     // Start all metric collections - including the previously missing ones
                     startRpmCollection()
@@ -146,6 +210,14 @@ class MetricViewModel(
         viewModelScope.launch {
             while (_connectionState.value is ConnectionState.Connected) {
                 try {
+                    // If engine is definitively off, don't need to collect RPM constantly
+                    if (!_engineRunning.value) {
+                        // We already know the engine is off, so RPM should be zero
+                        _rpm.value = 0
+                        delay(1000) // Check less frequently when engine off
+                        continue
+                    }
+                    
                     val command = "01 0C"
                     val response = obdService.sendCommand(command)
                     
@@ -157,9 +229,7 @@ class MetricViewModel(
                     // Log the parsed value
                     println("Parsed RPM: $rpmValue")
                     
-                    // Update engine state based on RPM
-                    _engineRunning.value = rpmValue > 0
-                    
+                    // Only update the RPM value, engine state is handled by the monitor
                     _rpm.value = rpmValue
                     
                     // Log the command and response
@@ -760,6 +830,25 @@ class MetricViewModel(
         object Connecting : ConnectionState()
         object Connected : ConnectionState()
         class Failed(val message: String) : ConnectionState()
+    }
+    
+    // Dedicated function to monitor engine state changes
+    private fun startEngineStateMonitoring() {
+        viewModelScope.launch {
+            while (_connectionState.value is ConnectionState.Connected) {
+                try {
+                    // Check engine state
+                    checkEngineRunning()
+                    
+                    // More aggressive checking when off to quickly detect when turned on again
+                    val checkInterval = if (_engineRunning.value) 3000L else 1000L
+                    delay(checkInterval)
+                } catch (e: Exception) {
+                    println("Error in engine state monitoring: ${e.message}")
+                    delay(3000) // Longer delay on errors
+                }
+            }
+        }
     }
     
     // Store all current metrics as a combined reading

@@ -157,6 +157,9 @@ fun TabletMetricGrid(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // RPM with range
+            // Normal: 600-5500 RPM
+            // Warning: 0-600 RPM (too low/stalling) or 5500-6500 RPM (high rev)
+            // Error: >6500 RPM (redline/dangerous)
             val rpmStatus = getMetricStatus(rpm.toDouble(), 0.0, 600.0, 5500.0, 6500.0)
             val rpmPercentage = (rpm.toFloat() / 7000f).coerceIn(0f, 1f)
             
@@ -174,7 +177,10 @@ fun TabletMetricGrid(
             )
             
             // Speed with range
-            val speedStatus = getMetricStatus(speed.toDouble(), 0.0, 0.0, 120.0, 160.0)
+            // Normal: 0-120 km/h
+            // Warning: 120-160 km/h (high speed)
+            // Error: >160 km/h (excessive/dangerous speed)
+            val speedStatus = getMetricStatus(speed.toDouble(), -1.0, -1.0, 120.0, 160.0)
             val speedPercentage = (speed.toFloat() / 180f).coerceIn(0f, 1f)
             
             MetricCard(
@@ -190,12 +196,15 @@ fun TabletMetricGrid(
                 modifier = Modifier.weight(1f)
             )
             
-            // Coolant Temperature (Range) - Moved to first row
+            // Coolant Temperature (Range)
+            // Normal: 60-90°C
+            // Warning: 0-60°C (too cold) or 90-110°C (getting hot)
+            // Error: <0°C (freezing risk) or >110°C (overheating)
             val coolantStatus = getMetricStatus(coolantTemp.toDouble(), 0.0, 60.0, 90.0, 110.0)
             val coolantPercentage = ((coolantTemp.toFloat() - 0f) / 120f).coerceIn(0f, 1f)
             
             MetricCard(
-                title = "COOLANT",
+                title = "COOLANT TEMPERATURE",
                 value = coolantTemp.toString(),
                 unit = "°C",
                 status = coolantStatus,
@@ -216,7 +225,10 @@ fun TabletMetricGrid(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Engine Load (Progress)
-            val engineLoadStatus = getMetricStatus(engineLoad.toDouble(), 0.0, 20.0, 80.0, 90.0)
+            // Normal: 20-80%
+            // Warning: 0-20% (very light load) or 80-90% (high load)
+            // Error: >90% (excessive load - potential engine strain)
+            val engineLoadStatus = getMetricStatus(engineLoad.toDouble(), -1.0, 20.0, 80.0, 90.0)
             val engineLoadPercentage = (engineLoad.toFloat() / 100f).coerceIn(0f, 1f)
             
             MetricCard(
@@ -231,7 +243,10 @@ fun TabletMetricGrid(
             )
             
             // Fuel Level (Progress)
-            val fuelStatus = getMetricStatus(fuelLevel.toDouble(), 0.0, 15.0, 100.0, 100.0)
+            // Normal: 15-100%
+            // Warning: 5-15% (low fuel)
+            // Error: <5% (critical low fuel)
+            val fuelStatus = getMetricStatus(fuelLevel.toDouble(), 5.0, 15.0, 101.0, 102.0)
             val fuelPercentage = (fuelLevel.toFloat() / 100f).coerceIn(0f, 1f)
             
             MetricCard(
@@ -246,11 +261,14 @@ fun TabletMetricGrid(
             )
             
             // Throttle Position (Progress)
-            val throttleStatus = getMetricStatus(throttlePosition.toDouble(), 0.0, 0.0, 90.0, 100.0)
+            // Normal: 0-90%
+            // Warning: 90-100% (full throttle)
+            // No error state for throttle position
+            val throttleStatus = getMetricStatus(throttlePosition.toDouble(), -1.0, -1.0, 90.0, 101.0)
             val throttlePercentage = (throttlePosition.toFloat() / 100f).coerceIn(0f, 1f)
             
             MetricCard(
-                title = "THROTTLE",
+                title = "THROTTLE POSITION",
                 value = throttlePosition.toString(),
                 unit = "%",
                 status = throttleStatus,
@@ -261,10 +279,13 @@ fun TabletMetricGrid(
             )
             
             // Intake Air Temperature (Value)
+            // Normal: -10°C to 40°C
+            // Warning: -30°C to -10°C (very cold) or 40°C to 60°C (very hot)
+            // Error: <-30°C or >60°C (extreme temperature)
             val intakeAirStatus = getMetricStatus(intakeAirTemp.toDouble(), -30.0, -10.0, 40.0, 60.0)
             
             MetricCard(
-                title = "INTAKE AIR",
+                title = "INTAKE AIR TEMPERATURE",
                 value = intakeAirTemp.toString(),
                 unit = "°C",
                 status = intakeAirStatus,
@@ -281,10 +302,13 @@ fun TabletMetricGrid(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Battery Voltage (Value)
+            // Normal: 11.5-14.5V
+            // Warning: 9.0-11.5V (low battery) or 14.5-15.5V (high charging)
+            // Error: <9.0V (critically low) or >15.5V (overcharging)
             val batteryStatus = getMetricStatus(batteryVoltage.toDouble(), 9.0, 11.5, 14.5, 15.5)
             
             MetricCard(
-                title = "BATTERY",
+                title = "BATTERY VOLTAGE",
                 value = String.format("%.1f", batteryVoltage),
                 unit = "V",
                 status = batteryStatus,
@@ -300,10 +324,13 @@ fun TabletMetricGrid(
             )
             
             // Barometric Pressure (Value)
+            // Normal: 90-105 kPa
+            // Warning: 80-90 kPa (low pressure) or 105-110 kPa (high pressure)
+            // Error: <80 kPa or >110 kPa (extreme weather conditions)
             val baroPressureStatus = getMetricStatus(baroPressure.toDouble(), 80.0, 90.0, 105.0, 110.0)
             
             MetricCard(
-                title = "BARO PRESS",
+                title = "BAROMETRIC PRESSURE",
                 value = baroPressure.toString(),
                 unit = "kPa",
                 status = baroPressureStatus,
@@ -359,6 +386,9 @@ fun PhoneMetricGrid(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // RPM with range
+            // Normal: 600-5500 RPM
+            // Warning: 0-600 RPM (too low/stalling) or 5500-6500 RPM (high rev)
+            // Error: >6500 RPM (redline/dangerous)
             val rpmStatus = getMetricStatus(rpm.toDouble(), 0.0, 600.0, 5500.0, 6500.0)
             val rpmPercentage = (rpm.toFloat() / 7000f).coerceIn(0f, 1f)
             
@@ -376,7 +406,10 @@ fun PhoneMetricGrid(
             )
             
             // Speed with range
-            val speedStatus = getMetricStatus(speed.toDouble(), 0.0, 0.0, 120.0, 160.0)
+            // Normal: 0-120 km/h
+            // Warning: 120-160 km/h (high speed)
+            // Error: >160 km/h (excessive/dangerous speed)
+            val speedStatus = getMetricStatus(speed.toDouble(), -1.0, -1.0, 120.0, 160.0)
             val speedPercentage = (speed.toFloat() / 180f).coerceIn(0f, 1f)
             
             MetricCard(
@@ -395,12 +428,15 @@ fun PhoneMetricGrid(
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        // Coolant (now separate for phones)
+        // Coolant Temperature
+        // Normal: 60-90°C
+        // Warning: 0-60°C (too cold) or 90-110°C (getting hot)
+        // Error: <0°C (freezing risk) or >110°C (overheating)
         val coolantStatus = getMetricStatus(coolantTemp.toDouble(), 0.0, 60.0, 90.0, 110.0)
         val coolantPercentage = ((coolantTemp.toFloat() - 0f) / 120f).coerceIn(0f, 1f)
         
         MetricCard(
-            title = "COOLANT",
+            title = "COOLANT TEMPERATURE",
             value = coolantTemp.toString(),
             unit = "°C",
             status = coolantStatus,
@@ -419,7 +455,10 @@ fun PhoneMetricGrid(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Engine Load (Progress)
-            val engineLoadStatus = getMetricStatus(engineLoad.toDouble(), 0.0, 20.0, 80.0, 90.0)
+            // Normal: 20-80%
+            // Warning: 0-20% (very light load) or 80-90% (high load)
+            // Error: >90% (excessive load - potential engine strain)
+            val engineLoadStatus = getMetricStatus(engineLoad.toDouble(), -1.0, 20.0, 80.0, 90.0)
             val engineLoadPercentage = (engineLoad.toFloat() / 100f).coerceIn(0f, 1f)
             
             MetricCard(
@@ -434,7 +473,10 @@ fun PhoneMetricGrid(
             )
             
             // Fuel Level (Progress)
-            val fuelStatus = getMetricStatus(fuelLevel.toDouble(), 0.0, 15.0, 100.0, 100.0)
+            // Normal: 15-100%
+            // Warning: 5-15% (low fuel)
+            // Error: <5% (critical low fuel)
+            val fuelStatus = getMetricStatus(fuelLevel.toDouble(), 5.0, 15.0, 101.0, 102.0)
             val fuelPercentage = (fuelLevel.toFloat() / 100f).coerceIn(0f, 1f)
             
             MetricCard(
@@ -457,11 +499,14 @@ fun PhoneMetricGrid(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Throttle Position (Progress)
-            val throttleStatus = getMetricStatus(throttlePosition.toDouble(), 0.0, 0.0, 90.0, 100.0)
+            // Normal: 0-90%
+            // Warning: 90-100% (full throttle)
+            // No error state for throttle position
+            val throttleStatus = getMetricStatus(throttlePosition.toDouble(), -1.0, -1.0, 90.0, 101.0)
             val throttlePercentage = (throttlePosition.toFloat() / 100f).coerceIn(0f, 1f)
             
             MetricCard(
-                title = "THROTTLE",
+                title = "THROTTLE POSITION",
                 value = throttlePosition.toString(),
                 unit = "%",
                 status = throttleStatus,
@@ -472,10 +517,13 @@ fun PhoneMetricGrid(
             )
             
             // Intake Air Temperature (Value)
+            // Normal: -10°C to 40°C
+            // Warning: -30°C to -10°C (very cold) or 40°C to 60°C (very hot)
+            // Error: <-30°C or >60°C (extreme temperature)
             val intakeAirStatus = getMetricStatus(intakeAirTemp.toDouble(), -30.0, -10.0, 40.0, 60.0)
             
             MetricCard(
-                title = "INTAKE AIR",
+                title = "INTAKE AIR TEMPERATURE",
                 value = intakeAirTemp.toString(),
                 unit = "°C",
                 status = intakeAirStatus,
@@ -492,10 +540,13 @@ fun PhoneMetricGrid(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Battery Voltage (Value)
+            // Normal: 11.5-14.5V
+            // Warning: 9.0-11.5V (low battery) or 14.5-15.5V (high charging)
+            // Error: <9.0V (critically low) or >15.5V (overcharging)
             val batteryStatus = getMetricStatus(batteryVoltage.toDouble(), 9.0, 11.5, 14.5, 15.5)
             
             MetricCard(
-                title = "BATTERY",
+                title = "BATTERY VOLTAGE",
                 value = String.format("%.1f", batteryVoltage),
                 unit = "V",
                 status = batteryStatus,
@@ -517,7 +568,7 @@ fun PhoneMetricGrid(
         val baroPressureStatus = getMetricStatus(baroPressure.toDouble(), 80.0, 90.0, 105.0, 110.0)
         
         MetricCard(
-            title = "BARO PRESS",
+            title = "BAROMETRIC PRESSURE",
             value = baroPressure.toString(),
             unit = "kPa",
             status = baroPressureStatus,

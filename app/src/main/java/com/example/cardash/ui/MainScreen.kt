@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -108,7 +109,7 @@ fun MainScreen(
     // Create tabs list based on visibility settings
     val tabs = mutableListOf<String>()
     tabs.add("Metrics") // Always included
-    if (tabSettings.showGraphsTab) tabs.add("Graphs")
+    if (tabSettings.showGraphsTab) tabs.add("Trends")
     if (tabSettings.showDiagnosticsTab) tabs.add("Diagnostics")
     if (tabSettings.showHistoryTab) tabs.add("History")
     
@@ -199,7 +200,6 @@ fun MainScreen(
                         onClick = { showDeviceDialog = true },
                         modifier = Modifier.size(48.dp)
                     ) {
-                        // Use a simple text icon instead of vector icons
                         // Use different colors based on connection state
                         val iconTint = when (connectionState) {
                             is MetricViewModel.ConnectionState.Connected -> Success
@@ -208,13 +208,11 @@ fun MainScreen(
                             else -> MaterialTheme.colorScheme.onPrimaryContainer
                         }
                         
-                        // Use a simple text-based solution instead of vector icons
-                        Text(
-                            text = "OBD",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = iconTint,
-                            textAlign = TextAlign.Center
+                        // Use power button graphic
+                        Icon(
+                            painter = painterResource(id = com.example.cardash.R.drawable.ic_power),
+                            contentDescription = "Connect to OBD",
+                            tint = iconTint
                         )
                     }
                 }
@@ -271,7 +269,7 @@ fun MainScreen(
             
             when (currentTab) {
                 "Metrics" -> MetricGridScreen(removeEngineStatus = true)
-                "Graphs" -> GraphScreen()
+                "Trends" -> GraphScreen()
                 "Diagnostics" -> LogViewerScreen(onBackPressed = { selectedTab = 0 })
                 "History" -> HistoryScreen()
                 else -> MetricGridScreen(removeEngineStatus = true) // Default fallback

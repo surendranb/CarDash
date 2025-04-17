@@ -26,6 +26,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Divider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -76,23 +77,7 @@ fun GraphScreen(
             Column(
                 modifier = Modifier.padding(16.dp)
             ) {
-                Text(
-                    text = "Graph Filters",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Parameter selection
-                Text(
-                    text = "Select Parameters",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
+                // Just parameter pills without any header
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -107,175 +92,174 @@ fun GraphScreen(
                     }
                 }
                 
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Date range selection
-                Text(
-                    text = "Date Range",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "From: ${viewModel.formatDate(startDate)}",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    
-                    Spacer(modifier = Modifier.width(16.dp))
-                    
-                    Text(
-                        text = "To: ${viewModel.formatDate(endDate)}",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-                
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                // Quick date range buttons - First row
-                Row(
+                // All quick date range buttons in a single line with horizontalScroll
+                LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    DateRangeButton(
-                        text = "Last Hour",
-                        onClick = { 
-                            val now = Date()
-                            val hourAgo = Calendar.getInstance().apply {
-                                time = now
-                                add(Calendar.HOUR, -1)
-                            }.time
-                            viewModel.updateDateRange(hourAgo, now)
-                        }
-                    )
+                    // "Last Hour" button
+                    item {
+                        DateRangeButton(
+                            text = "Last Hour",
+                            onClick = { 
+                                val now = Date()
+                                val hourAgo = Calendar.getInstance().apply {
+                                    time = now
+                                    add(Calendar.HOUR, -1)
+                                }.time
+                                viewModel.updateDateRange(hourAgo, now)
+                            }
+                        )
+                    }
                     
-                    DateRangeButton(
-                        text = "Last 6h",
-                        onClick = { 
-                            val now = Date()
-                            val sixHoursAgo = Calendar.getInstance().apply {
-                                time = now
-                                add(Calendar.HOUR, -6)
-                            }.time
-                            viewModel.updateDateRange(sixHoursAgo, now)
-                        }
-                    )
+                    // "Last 6h" button
+                    item {
+                        DateRangeButton(
+                            text = "Last 6h",
+                            onClick = { 
+                                val now = Date()
+                                val sixHoursAgo = Calendar.getInstance().apply {
+                                    time = now
+                                    add(Calendar.HOUR, -6)
+                                }.time
+                                viewModel.updateDateRange(sixHoursAgo, now)
+                            }
+                        )
+                    }
                     
-                    DateRangeButton(
-                        text = "Last 12h",
-                        onClick = { 
-                            val now = Date()
-                            val twelveHoursAgo = Calendar.getInstance().apply {
-                                time = now
-                                add(Calendar.HOUR, -12)
-                            }.time
-                            viewModel.updateDateRange(twelveHoursAgo, now)
-                        }
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Quick date range buttons - Second row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    DateRangeButton(
-                        text = "Last 24h",
-                        onClick = { 
-                            val now = Date()
-                            val dayAgo = Calendar.getInstance().apply {
-                                time = now
-                                add(Calendar.DAY_OF_YEAR, -1)
-                            }.time
-                            viewModel.updateDateRange(dayAgo, now)
-                        }
-                    )
+                    // "Last 12h" button
+                    item {
+                        DateRangeButton(
+                            text = "Last 12h",
+                            onClick = { 
+                                val now = Date()
+                                val twelveHoursAgo = Calendar.getInstance().apply {
+                                    time = now
+                                    add(Calendar.HOUR, -12)
+                                }.time
+                                viewModel.updateDateRange(twelveHoursAgo, now)
+                            }
+                        )
+                    }
                     
-                    DateRangeButton(
-                        text = "Last Week",
-                        onClick = { 
-                            val now = Date()
-                            val weekAgo = Calendar.getInstance().apply {
-                                time = now
-                                add(Calendar.DAY_OF_YEAR, -7)
-                            }.time
-                            viewModel.updateDateRange(weekAgo, now)
-                        }
-                    )
+                    // "Last 24h" button
+                    item {
+                        DateRangeButton(
+                            text = "Last 24h",
+                            onClick = { 
+                                val now = Date()
+                                val dayAgo = Calendar.getInstance().apply {
+                                    time = now
+                                    add(Calendar.DAY_OF_YEAR, -1)
+                                }.time
+                                viewModel.updateDateRange(dayAgo, now)
+                            }
+                        )
+                    }
                     
-                    DateRangeButton(
-                        text = "Last Month",
-                        onClick = { 
-                            val now = Date()
-                            val monthAgo = Calendar.getInstance().apply {
-                                time = now
-                                add(Calendar.MONTH, -1)
-                            }.time
-                            viewModel.updateDateRange(monthAgo, now)
-                        }
-                    )
+                    // "Last Week" button
+                    item {
+                        DateRangeButton(
+                            text = "Last Week",
+                            onClick = { 
+                                val now = Date()
+                                val weekAgo = Calendar.getInstance().apply {
+                                    time = now
+                                    add(Calendar.DAY_OF_YEAR, -7)
+                                }.time
+                                viewModel.updateDateRange(weekAgo, now)
+                            }
+                        )
+                    }
+                    
+                    // "Last Month" button
+                    item {
+                        DateRangeButton(
+                            text = "Last Month",
+                            onClick = { 
+                                val now = Date()
+                                val monthAgo = Calendar.getInstance().apply {
+                                    time = now
+                                    add(Calendar.MONTH, -1)
+                                }.time
+                                viewModel.updateDateRange(monthAgo, now)
+                            }
+                        )
+                    }
                 }
             }
         }
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        // If no readings available, show a message
-        if (allReadings.isEmpty()) {
-            Box(
+        // Graph results section with a header
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(8.dp)
-                    ),
-                contentAlignment = Alignment.Center
+                    .padding(16.dp)
             ) {
-                Text(
-                    text = "No data available for the selected time period",
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-        // Display graphs
-        else {
-            if (graphData.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = RoundedCornerShape(8.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Please select at least one parameter to graph",
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            } else {
-                // Display a graph for each selected parameter
-                graphData.forEach { data ->
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    LineGraph(
-                        data = data,
+                // No header for trend results
+                
+                // If no readings available, show a message
+                if (allReadings.isEmpty()) {
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(200.dp)
-                    )
+                            .height(180.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(8.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No data available for the selected time period",
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+                // Display graphs
+                else if (graphData.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(8.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Please select at least one parameter to graph",
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                } else {
+                    // Display a graph for each selected parameter
+                    graphData.forEachIndexed { index, data ->
+                        if (index > 0) {
+                            Divider(
+                                modifier = Modifier.padding(vertical = 16.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            )
+                        }
+                        
+                        LineGraph(
+                            data = data,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                        )
+                    }
                 }
             }
         }
@@ -343,82 +327,106 @@ fun LineGraph(
     val parameter = data.parameter
     val dataPoints = data.dataPoints
     
-    // Simple implementation for now - we'll use a canvas-based approach
-    Card(
-        modifier = modifier,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    Column(
+        modifier = modifier
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
+        // Graph title with units
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Graph title
             Text(
-                text = "${parameter.displayName} (${parameter.unit})",
+                text = parameter.displayName,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f)
-            ) {
-                if (dataPoints.isNotEmpty()) {
-                    val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-                    val minValue = dataPoints.minOf { it.value }
-                    val maxValue = dataPoints.maxOf { it.value }
+            Text(
+                text = parameter.unit,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Graph display area with stats
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(160.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                .padding(4.dp)
+        ) {
+            if (dataPoints.isNotEmpty()) {
+                val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+                val minValue = dataPoints.minOf { it.value }
+                val maxValue = dataPoints.maxOf { it.value }
+                
+                // Display min/max values in a horizontal stats bar
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Min: ${String.format("%.1f", minValue)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     
-                    // Display min/max values
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(4.dp)
-                    ) {
-                        Text(
-                            text = "Max: ${String.format("%.1f", maxValue)} ${parameter.unit}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        
-                        Text(
-                            text = "Min: ${String.format("%.1f", minValue)} ${parameter.unit}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+                    Text(
+                        text = "Max: ${String.format("%.1f", maxValue)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                // Display time range
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = dateFormat.format(dataPoints.first().timestamp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     
-                    // Display time range
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .fillMaxWidth()
-                            .padding(4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = dateFormat.format(dataPoints.first().timestamp),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        
-                        Text(
-                            text = dateFormat.format(dataPoints.last().timestamp),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    
-                    // Draw the line chart
+                    Text(
+                        text = dateFormat.format(dataPoints.last().timestamp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                // Draw the line chart in the center area
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 8.dp, vertical = 24.dp) // Make room for labels
+                ) {
                     LineChartCanvas(
                         dataPoints = dataPoints,
                         modifier = Modifier.fillMaxSize(),
                         lineColor = MaterialTheme.colorScheme.primary
                     )
-                } else {
+                }
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
                         text = "No data available",
-                        modifier = Modifier.align(Alignment.Center),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

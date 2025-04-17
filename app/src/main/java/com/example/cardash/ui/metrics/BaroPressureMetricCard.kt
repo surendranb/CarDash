@@ -18,7 +18,7 @@ fun BaroPressureMetricCard(
     }
     
     MetricCard(
-        title = "BARO PRESS",
+        title = "BAROMETRIC PRESSURE",
         value = "$pressure",
         unit = "kPa",
         status = status,
