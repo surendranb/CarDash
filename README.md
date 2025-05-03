@@ -1,173 +1,182 @@
 # CarDash
 
-## Project Overview
+<div align="center">
+  <img src="docs/images/cardash_logo.png" alt="CarDash Logo" width="200"/>
+  <br>
+  <h3>Your Vehicle's Digital Dashboard & Diagnostics Companion</h3>
+  
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+  [![Android Version](https://img.shields.io/badge/Android-8.0%2B-green)](https://www.android.com/)
+  [![Kotlin](https://img.shields.io/badge/Kotlin-1.8-orange)](https://kotlinlang.org/)
+  [![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Latest-purple)](https://developer.android.com/jetpack/compose)
+  
+</div>
 
-CarDash is an Android app for OBD2 vehicle diagnostics with real-time metrics and trip history.
+## 🚗 About CarDash
 
-## Features
+CarDash transforms your Android device into a powerful automotive dashboard, connecting to your vehicle's OBD-II port to provide real-time metrics and basic diagnostics. Whether you're a car enthusiast wanting to monitor your engine's vital statistics or a DIY mechanic diagnosing issues, CarDash offers an intuitive interface for viewing your vehicle's data.
 
-*   Real-time metrics display
-*   Trip recording and history
-*   Bluetooth OBD2 integration
-*   Customizable UI
+<div align="center">
+  <img src="docs/images/mockup_dashboard.png" alt="CarDash App Dashboard" width="80%"/>
+</div>
 
-## Development Progress
+## ✨ Key Features
 
-### Phase 1: UI Foundation
+### 📊 Comprehensive Metrics Dashboard
+* **Real-time Engine Stats**: RPM, speed, engine load, and throttle position
+* **Temperature Monitoring**: Coolant and intake air temperature
+* **System Status**: Fuel level, fuel pressure, barometric pressure, and battery voltage
+* **Customizable Layout**: Arrange metrics in your preferred dashboard configuration
 
-*   \[x] Initialize Git repository
-*   \[x] Create basic tab navigation
-*   \[x] Implement metric card components
-*   \[x] Set up color threshold system
-*   \[x] Create graph view placeholder
+### 📈 Data Visualization
+* **Basic Graphs**: View trends of your vehicle's parameters
+* **Historical Data**: See how metrics change over time
 
-### Phase 2: OBD2 Integration (Bluetooth) - COMPLETE
+### 🔧 Basic Diagnostics
+* **OBD-II Error Codes**: Read diagnostic trouble codes
+* **Log Viewer**: View basic communication logs with your vehicle's ECU
+* **Data Recording**: Save session data for later analysis
 
-*   \[x] Implement RPM command service via Bluetooth
-*   \[x] Handle OBD command parsing/errors (Basic RPM parsing implemented)
-*   \[x] Display real-time RPM in metrics grid
-*   \[x] Test with physical OBD2 scanner
-*   \[x] Add Bluetooth permission handling
-*   \[x] Implement device selection UI
-*   \[x] Added all 10 planned metrics
+### 📱 Modern Android Experience
+* **Material Design**: Clean, intuitive interface
+* **Jetpack Compose UI**: Responsive layouts for various screen sizes
+* **Tab-based Navigation**: Easy access to different functionality
 
-### Phase 3: Data Persistence
+<div align="center">
+  <table>
+    <tr>
+      <td><img src="docs/images/metrics_screen.png" width="250" alt="Metrics Dashboard"/></td>
+      <td><img src="docs/images/graphs_screen.png" width="250" alt="Performance Graphs"/></td>
+      <td><img src="docs/images/diagnostics_screen.png" width="250" alt="Diagnostics"/></td>
+    </tr>
+    <tr>
+      <td align="center"><b>Real-time Metrics</b></td>
+      <td align="center"><b>Data Graphs</b></td>
+      <td align="center"><b>Diagnostic Tools</b></td>
+    </tr>
+  </table>
+</div>
 
-*   \[ ] Setup Room database
-*   \[ ] Implement trip recording
-*   \[ ] Store RPM with timestamps
-*   \[ ] Create trip history list
+## 🛠️ Requirements
 
-### Phase 4: Visualization
+* Android 8.0 (API level 26) or higher
+* Bluetooth-enabled Android device
+* OBD-II compatible vehicle (generally all cars made after 1996 in the US, 2001 in the EU, and 2008 globally)
+* ELM327-based Bluetooth OBD-II adapter (widely available for $10-30)
 
-*   \[ ] Add line charts for trips
-*   \[ ] Implement time filtering
-*   \[ ] Enhance card coloring logic
+## 📱 Installation
 
-## Metric Implementation Guide
+### Google Play Store
+<a href="#"><img src="docs/images/google-play-badge.png" height="50" alt="Get it on Google Play"/></a>
+*(Coming Soon)*
 
-### Development Methodology
+### Direct APK Download
+* Download the latest release APK from our [Releases page](https://github.com/surendranb/cardash/releases)
+* Enable "Install from Unknown Sources" in your device settings
+* Open the downloaded APK to install
 
-1.  **Single Responsibility Principle**:
-    *   Each metric has its own dedicated files
-    *   Clear separation between UI, business logic, and data layer
-2.  **Test-Driven Development**:
-    *   Write unit tests for parsing logic first
-    *   Verify with mock OBD responses before live testing
-3.  **Incremental Implementation**:
-    *   Implement one metric at a time
-    *   Verify each step before proceeding
+### Building from Source
+```bash
+# Clone the repository
+git clone https://github.com/surendranb/cardash.git
 
-### Implementation Steps
+# Change to project directory
+cd cardash
 
-1.  Research & Planning
-    *   \[ ] Identify OBD2 PID code for the metric
-    *   \[ ] Research response format and parsing requirements
-    *   \[ ] Document expected value ranges and units
-2.  Service Layer Implementation
-    *   \[ ] Add command constant to OBDService companion object
-    *   \[ ] Implement sendCommand() wrapper method
-    *   \[ ] Create parseResponse() function
-    *   \[ ] Add Flow property for live updates
-3.  ViewModel Integration
-    *   \[ ] Extend MetricViewModel to handle new metric
-    *   \[ ] Add state management for the metric
-    *   \[ ] Implement threshold coloring logic
-4.  UI Components
-    *   \[ ] Create dedicated MetricCard composable
-    *   \[ ] Add to MetricGridScreen layout
-    *   \[ ] Implement proper formatting/units display
-5.  Testing & Validation
-    *   \[ ] Unit test parsing logic
-    *   \[ ] Verify with physical OBD2 scanner
-    *   \[ ] Test edge cases (disconnections, invalid responses)
+# Build with Gradle
+./gradlew assembleDebug
 
-### File Structure
-
-    app/src/main/java/com/example/cardash/
-    ├── services/obd/
-    │   └── OBDService.kt          # Add command handling
-    ├── ui/metrics/
-    │   ├── {MetricName}Card.kt    # UI component
-    │   ├── MetricViewModel.kt     # Business logic
-    │   └── MetricGrid.kt          # Layout integration
-
-### Code Standards
-
-1.  **Naming Conventions**:
-    *   Commands: `PID_SHORT_NAME` (e.g. `ENGINE_LOAD`)
-    *   Flows: `metricNameFlow` (e.g. `engineLoadFlow`)
-    *   Cards: `{MetricName}Card` (e.g. `EngineLoadCard`)
-2.  **Error Handling**:
-    *   All OBD commands must handle:
-        *   Connection errors
-        *   Invalid responses
-        *   Timeouts
-3.  **Performance**:
-    *   Limit polling to necessary frequency
-    *   Use coroutines properly
-    *   Avoid UI thread blocking
-
-### Example Implementation (Speed)
-
-```kotlin
-// OBDService.kt
-companion object {
-    const val SPEED_COMMAND = "010D" // PID for Speed
-}
-
-val speedFlow: Flow<Int> = flow {
-    while(isRunning) {
-        emit(sendCommand(SPEED_COMMAND).let { response ->
-            // Parsing logic - speed is single byte in km/h
-            val values = response.split(" ")
-            values[1].toIntOrNull(16) ?: 0
-        })
-        delay(1000) // Poll every second
-    }
-}.catch { e ->
-    // Error handling
-}
+# The APK will be available at:
+# app/build/outputs/apk/debug/app-debug.apk
 ```
 
-### Common Pitfalls & Solutions
+## 🚀 Getting Started
 
-1.  **UI Component Issues**:
-    *   Ensure all imports are correct (MetricCard, MetricStatus, etc.)
-    *   MetricCard only accepts these status values from enum:
-        *   NORMAL (default safe operating range)
-        *   WARNING (approaching limits)
-        *   ERROR (dangerous/damaging levels)
-    *   Do not create custom status values - use the existing enum
-    *   Verify @Composable context is properly set
-    *   Include imports from both components and theme packages
-2.  **Build Verification**:
-    *   Always run `./gradlew assembleDebug` before committing
-    *   Address all compiler errors before proceeding
-    *   Warnings about deprecated APIs can be handled later
-3.  **Testing Approach**:
-    *   Physical testing can be done after basic validation
-    *   Focus on getting the build working first
-    *   Use Git to track changes incrementally
+1. **Connect your OBD-II adapter**
+   * Plug the adapter into your vehicle's OBD-II port (typically under the dashboard)
+   * Turn on vehicle ignition (engine doesn't need to be running)
 
-### Review Checklist
+2. **Pair with Bluetooth**
+   * Pair your Android device with the OBD-II adapter in your Bluetooth settings
+   * Default PIN is often `0000` or `1234`
 
-*   \[ ] Compiles without warnings
-*   \[ ] Passes all unit tests
-*   \[ ] Works with physical OBD2 device
-*   \[ ] Proper error states handled
-*   \[ ] Performance optimized
+3. **Launch CarDash**
+   * Open the app and tap the connection button in the top right
+   * Select your paired OBD-II adapter
+   * Accept the requested permissions
 
-## Final Metrics Implementation Plan
+4. **Start monitoring**
+   * Once connected, your vehicle's metrics will appear on the dashboard
+   * Customize your view using the settings menu
 
-1.  Throttle Position (PID 0111) - Shows percentage throttle opening
-2.  Fuel Pressure (PID 010A) - Important fuel system indicator
-3.  Barometric Pressure (PID 0133) - Key atmospheric reading
-4.  Timing Advance (PID 010E) - Shows ignition timing adjustment
-5.  Battery Voltage (PID 0142) - Control module voltage monitoring
+<div align="center">
+  <img src="docs/images/connection_flow.png" alt="Connection Flow" width="90%"/>
+</div>
 
-## Future Enhancements
+## 🔄 Current Status
 
-1.  Cloud sync
-2.  AI insights
-3.  Additional OBD2 parameters
+### What's Working
+✅ Bluetooth connection to most standard ELM327 OBD-II adapters  
+✅ Real-time display of vehicle metrics with customizable dashboard  
+✅ Basic graph visualization of metrics over time  
+✅ Basic diagnostic logging and session history  
+✅ Multiple tabs for different functionality (Metrics, Trends, Diagnostics, History)  
+✅ Settings customization for tab visibility and data collection frequency  
+
+### What's In Development
+🔄 **Android Auto Integration** - View your vehicle metrics directly on your car's infotainment display  
+🔄 **Gemini AI Integration** - Advanced diagnostics and predictive maintenance using Google's Gemini AI  
+🔄 Enhanced diagnostic trouble code (DTC) interpretation  
+🔄 Trip logging and analysis  
+🔄 Fuel economy calculations  
+🔄 Expanded vehicle compatibility testing  
+
+### Known Limitations
+⚠️ Fuel pressure readings may be unavailable on some vehicles  
+⚠️ Battery voltage reading accuracy depends on OBD-II adapter quality  
+⚠️ Not all metrics are supported by all vehicles (manufacturer dependent)  
+⚠️ Performance may vary based on vehicle's OBD-II implementation  
+
+## 🤝 Contributing
+
+We welcome contributions of all kinds from the community! Whether you're fixing bugs, adding features, improving documentation, or spreading the word, your help makes CarDash better for everyone.
+
+* **Code Contributions**: See our [CONTRIBUTING.md](CONTRIBUTING.md) (coming soon) for guidelines
+* **Bug Reports & Feature Requests**: Submit through our [Issues page](https://github.com/surendranb/cardash/issues)
+* **Discussion**: Join the community to discuss ideas and get help
+
+### Development Environment
+* Android Studio Arctic Fox or newer
+* Kotlin 1.8+
+* Java 11+
+* Android SDK 33+
+
+## 📚 Documentation
+
+* User Guide - Coming soon
+* Developer Guide - Coming soon
+* OBD-II Command Reference - Coming soon
+* Troubleshooting - Coming soon
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgements
+
+* [ELM327 Documentation](https://www.elmelectronics.com/products/ecutool/obdic/) for protocol specifications
+* [OBD-II PIDs Reference](https://en.wikipedia.org/wiki/OBD-II_PIDs) for parameter definitions
+* Android Jetpack libraries for modern Android development
+* All our open source contributors and testers
+
+## 📬 Contact & Support
+
+* [GitHub Issues](https://github.com/surendranb/cardash/issues) for bug reports and feature requests
+* Email: support@cardash-app.com (for private inquiries)
+
+---
+
+<div align="center">
+  <i>CarDash is an independent project not affiliated with any automotive manufacturer.</i><br>
+  <i>Use of this application is at your own risk and discretion.</i>
+</div>
