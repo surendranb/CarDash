@@ -17,6 +17,19 @@
 
 CarDash transforms your Android device into a powerful automotive dashboard, connecting to your vehicle's OBD-II port to provide real-time metrics and basic diagnostics. Whether you're a car enthusiast wanting to monitor your engine's vital statistics or a DIY mechanic diagnosing issues, CarDash offers an intuitive interface for viewing your vehicle's data.
 
+## 🔒 Privacy First
+
+CarDash is built with privacy as a core principle:
+
+* **No Account Required** - Use the app without creating any account or signing up
+* **No Data Collection** - We don't track, collect, or transmit your vehicle data
+* **No Analytics** - No usage tracking or analytics frameworks
+* **No Advertisements** - Zero ads or third-party tracking
+* **100% Local Storage** - All your data stays on your device
+* **No Internet Required** - Works completely offline after installation
+
+Your vehicle data belongs to you alone. Period.
+
 <div align="center">
 
 |Real-time Metrics Dashboard|Settings & Configuration|
