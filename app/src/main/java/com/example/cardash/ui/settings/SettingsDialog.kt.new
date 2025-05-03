@@ -20,21 +20,13 @@ fun SettingsDialog(
     onDismiss: () -> Unit
 ) {
     var showAboutDialog by remember { mutableStateOf(false) }
-    
-    // Collect states correctly
-    val verboseLoggingEnabled by metricViewModel.verboseLoggingEnabled.collectAsState()
-    var verboseLoggingState by remember { mutableStateOf(verboseLoggingEnabled) }
+    var verboseLoggingEnabled by remember { mutableStateOf(metricViewModel.verboseLoggingEnabled.collectAsState().value) }
     
     // Data collection frequency slider value
     var dataCollectionFrequency by remember { mutableStateOf(AppPreferences.DEFAULT_DATA_COLLECTION_FREQUENCY) } 
     
     // Storage frequency slider value
     var storageFrequency by remember { mutableStateOf(AppPreferences.DEFAULT_STORAGE_FREQUENCY) }
-    
-    // Update local state when external state changes
-    LaunchedEffect(verboseLoggingEnabled) {
-        verboseLoggingState = verboseLoggingEnabled
-    }
     
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
@@ -117,10 +109,10 @@ fun SettingsDialog(
                 // Verbose logging setting
                 TabSettingItem(
                     tabName = "Verbose OBD Command Logging",
-                    checked = verboseLoggingState,
+                    checked = verboseLoggingEnabled,
                     enabled = true,
                     onCheckedChange = { 
-                        verboseLoggingState = it
+                        verboseLoggingEnabled = it
                         metricViewModel.toggleVerboseLogging(it)
                     }
                 )
