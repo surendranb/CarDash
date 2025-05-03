@@ -1,14 +1,15 @@
 # CarDash
 
 <div align="center">
-  <img src="logo.png" alt="CarDash Logo" width="200"/>
-  <br>
-  <h3>Your Vehicle's Digital Dashboard & Diagnostics Companion</h3>
-  
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-  [![Android Version](https://img.shields.io/badge/Android-8.0%2B-green)](https://www.android.com/)
-  [![Kotlin](https://img.shields.io/badge/Kotlin-1.8-orange)](https://kotlinlang.org/)
-  [![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Latest-purple)](https://developer.android.com/jetpack/compose)
+
+![CarDash Logo](logo.png)
+
+### Your Vehicle's Digital Dashboard & Diagnostics Companion
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Android Version](https://img.shields.io/badge/Android-8.0%2B-green)](https://www.android.com/)
+[![Kotlin](https://img.shields.io/badge/Kotlin-1.8-orange)](https://kotlinlang.org/)
+[![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Latest-purple)](https://developer.android.com/jetpack/compose)
   
 </div>
 
@@ -17,16 +18,11 @@
 CarDash transforms your Android device into a powerful automotive dashboard, connecting to your vehicle's OBD-II port to provide real-time metrics and basic diagnostics. Whether you're a car enthusiast wanting to monitor your engine's vital statistics or a DIY mechanic diagnosing issues, CarDash offers an intuitive interface for viewing your vehicle's data.
 
 <div align="center">
-  <table>
-    <tr>
-      <td><img src="mockup_dashboard.png" width="250" alt="Dashboard View"/></td>
-      <td><img src="settings.png" width="250" alt="Settings Screen"/></td>
-    </tr>
-    <tr>
-      <td align="center"><b>Real-time Metrics Dashboard</b></td>
-      <td align="center"><b>Settings & Configuration</b></td>
-    </tr>
-  </table>
+
+|Real-time Metrics Dashboard|Settings & Configuration|
+|:-------------------------:|:----------------------:|
+|![Dashboard View](mockup_dashboard.png)|![Settings Screen](settings.png)|
+
 </div>
 
 ## ✨ Key Features
