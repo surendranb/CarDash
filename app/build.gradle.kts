@@ -5,15 +5,15 @@ plugins {
 }
 
 android {
-    namespace = "com.example.cardash"
+    namespace = "com.fuseforge.cardash"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.cardash"
+        applicationId = "com.fuseforge.cardash"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 5
+        versionName = "1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
@@ -83,6 +83,9 @@ dependencies {
     
     // Android Auto
     implementation(libs.androidx.car.app)
+    
+    // OBD-Java-API for OBD2 communication
+    implementation("com.github.eltonvs:kotlin-obd-api:1.3.0")
     
     // Testing
     testImplementation("junit:junit:4.13.2")

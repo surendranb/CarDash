@@ -8,7 +8,7 @@
         trusted Android Auto hosts.
     -->
     <string-array name="hosts_allowlist_sample">
-        <!-- Example: <item>com.google.android.projection.gearhead</item> -->
+        <item>com.google.android.projection.gearhead</item>
         <!-- For now, leaving it empty for wider compatibility during development, 
              but be aware of security implications for production. -->
     </string-array>
