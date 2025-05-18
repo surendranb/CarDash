@@ -11,6 +11,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.asStateFlow
+import android.annotation.SuppressLint
 
 /**
  * Data class representing an OBD command with callback
@@ -35,9 +37,19 @@ enum class OBDDataType {
     FUEL_PRESSURE,
     BARO_PRESSURE,
     BATTERY_VOLTAGE,
+    MAF,
+    AMBIENT_AIR_TEMP,
     CONNECTION,
     INITIALIZATION,
     UNKNOWN
+}
+
+enum class ConnectionStatus {
+    DISCONNECTED,
+    CONNECTING,
+    CONNECTED,
+    RECONNECTING, // State for when attempting to reconnect after a drop
+    ERROR       // State for when a connection attempt fails or a persistent error occurs
 }
 
 class OBDService(
@@ -50,7 +62,13 @@ class OBDService(
     var outputStream: OutputStream? = null
         private set
     
+    private var lastDeviceAddress: String? = null // To store the address for reconnection
+    private val _connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
+    val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus.asStateFlow()
+    
     private val isRunning = AtomicBoolean(false)
+    private var consecutiveErrorCount = 0
+    private val MAX_CONSECUTIVE_ERRORS = 5 // Configurable: after 5 errors, try to reconnect
     
     // Command queue channel
     private val commandChannel = Channel<OBDCommand>(Channel.BUFFERED)
@@ -120,6 +138,18 @@ class OBDService(
         5000
     ) { response -> parseBatteryVoltageResponse(response) }
 
+    val mafFlow: Flow<Float> = createParameterFlow(
+        MAF_COMMAND,
+        OBDDataType.MAF,
+        1000 // Polling interval, adjust as needed
+    ) { response -> parseMafResponse(response) }
+
+    val ambientAirTempFlow: Flow<Int> = createParameterFlow(
+        AMBIENT_AIR_TEMP_COMMAND,
+        OBDDataType.AMBIENT_AIR_TEMP,
+        5000 // Polling interval, adjust as needed
+    ) { response -> parseAmbientAirTempResponse(response) }
+
     /**
      * Generic function to create a parameter flow
      */
@@ -130,22 +160,41 @@ class OBDService(
         parser: (String) -> T
     ): Flow<T> = callbackFlow {
         val job = ioScope.launch {
-            while (isRunning.get()) {
-                try {
-                    val result = enqueueSendCommand(command, dataType)
-                    send(parser(result))
-                } catch (e: Exception) {
-                    // Handle error but don't close the flow
-                    println("Error in flow for ${dataType.name}: ${e.message}")
+            while (isRunning.get() && isActive) {
+                if (_connectionStatus.value != ConnectionStatus.CONNECTED) {
+                    delay(pollingIntervalMs)
+                    continue
                 }
-                delay(pollingIntervalMs)
+                try {
+                    val resultWrapper = enqueueSendCommand(command, dataType)
+                    resultWrapper.fold(
+                        onSuccess = {
+                            send(parser(it))
+                            resetConsecutiveErrorCount()
+                        },
+                        onFailure = { e ->
+                            println("Error in flow for ${dataType.name}: ${e.message}")
+                            handleCommandError(e)
+                        }
+                    )
+                } catch (e: CancellationException) {
+                    println("Flow for ${dataType.name} cancelled.")
+                    throw e
+                } catch (e: Exception) {
+                    println("Unexpected error in flow for ${dataType.name}: ${e.message}")
+                    handleCommandError(e)
+                }
+                if (isActive) {
+                   delay(pollingIntervalMs)
+                }
             }
         }
         
         awaitClose {
+            println("Flow for ${dataType.name} closing.")
             job.cancel()
         }
-    }
+    }.shareIn(ioScope, SharingStarted.WhileSubscribed(), replay = 0)
 
     sealed class ConnectionResult {
         data object Success : ConnectionResult()
@@ -183,29 +232,44 @@ class OBDService(
     private fun stopCommandProcessor() {
         commandProcessorJob?.cancel()
         commandProcessorJob = null
+        println("OBDService: Command processor stopped.")
     }
 
     /**
      * Enqueue a command to be sent via the command processor
      */
-    private suspend fun enqueueSendCommand(command: String, dataType: OBDDataType): String {
+    private suspend fun enqueueSendCommand(command: String, dataType: OBDDataType): Result<String> {
         return suspendCancellableCoroutine { continuation ->
             val obdCommand = OBDCommand(command, dataType) { result ->
-                if (result.isSuccess) {
-                    continuation.resume(result.getOrThrow()) { }
-                } else {
-                    continuation.resumeWithException(result.exceptionOrNull() ?: Exception("Unknown error"))
+                if (continuation.isActive) {
+                    continuation.resume(result) { /* handle cancellation if needed */ }
                 }
             }
             
             ioScope.launch {
-                commandChannel.send(obdCommand)
+                try {
+                    commandChannel.send(obdCommand)
+                } catch (e: Exception) {
+                    // If channel send fails (e.g., channel closed), propagate error
+                    if (continuation.isActive) {
+                        continuation.resume(Result.failure(e)) { }
+                    }
+                }
             }
         }
     }
 
+    @SuppressLint("MissingPermission") // Suppress lint for socket.connect()
     suspend fun connect(deviceAddress: String): ConnectionResult {
         return withContext(ioScope.coroutineContext) {
+            if (_connectionStatus.value == ConnectionStatus.CONNECTING || _connectionStatus.value == ConnectionStatus.CONNECTED) {
+                println("OBDService: Already connected or connecting.")
+                // To prevent re-entrant calls if already connected or in the process. Return current state.
+                return@withContext if (_connectionStatus.value == ConnectionStatus.CONNECTED) ConnectionResult.Success else ConnectionResult.Error("Connection already in progress")
+            }
+            _connectionStatus.value = ConnectionStatus.CONNECTING
+            println("OBDService: Connecting to $deviceAddress")
+
             try {
                 println("OBDService: Starting connection to $deviceAddress")
                 
@@ -260,10 +324,14 @@ class OBDService(
                     delay(3000)
 
                     // Verify communication is working with a simple command
-                    val testResult = enqueueSendCommand("0100", OBDDataType.INITIALIZATION)
-                    if (!testResult.contains("41 00") && !testResult.contains("4100")) {
-                        println("OBDService: Initial test command failed, response: $testResult")
-                        // We don't throw here, some vehicles might still work
+                    val testResultWrapper = enqueueSendCommand("0100", OBDDataType.INITIALIZATION)
+                    testResultWrapper.onSuccess { testResultString -> // Operate on success
+                        if (!testResultString.contains("41 00") && !testResultString.contains("4100")) {
+                            println("OBDService: Initial test command failed, response: $testResultString")
+                            // We don't throw here, some vehicles might still work
+                        }
+                    }.onFailure { e -> // Handle failure if needed, e.g., log it
+                        println("OBDService: Failed to get initial test command response: ${e.message}")
                     }
 
                     println("OBDService: Initialization sequence completed.")
@@ -274,6 +342,10 @@ class OBDService(
                 
                 println("Connected successfully!")
                 isRunning.set(true)
+                startCommandProcessor() // Ensure command processor is (re)started
+                consecutiveErrorCount = 0 // Reset errors on new successful connection
+                this@OBDService.lastDeviceAddress = deviceAddress // Store address on success
+                _connectionStatus.value = ConnectionStatus.CONNECTED
                 ConnectionResult.Success
             } catch (e: Exception) {
                 println("OBDService Connection Failed:")
@@ -281,7 +353,8 @@ class OBDService(
                 println("Socket state: ${socket?.isConnected}")
                 println("Bluetooth enabled: ${bluetoothManager.isBluetoothEnabled()}")
                 println("Error details: ${e.javaClass.simpleName} - ${e.message}")
-                disconnect()
+                disconnect() // Full disconnect on failure
+                _connectionStatus.value = ConnectionStatus.ERROR
                 ConnectionResult.Error(
                     when {
                         e is java.net.SocketTimeoutException -> "Connection timed out - verify adapter power and proximity"
@@ -295,6 +368,7 @@ class OBDService(
     }
 
     fun disconnect() {
+        _connectionStatus.value = ConnectionStatus.DISCONNECTED
         isRunning.set(false)
         stopCommandProcessor()
         
@@ -361,7 +435,7 @@ class OBDService(
      * Public API for sending commands (uses the queue)
      */
     suspend fun sendCommand(command: String): String {
-        return enqueueSendCommand(command, OBDDataType.UNKNOWN)
+        return enqueueSendCommand(command, OBDDataType.UNKNOWN).getOrThrow()
     }
 
     companion object {
@@ -374,11 +448,13 @@ class OBDService(
         const val INTAKE_AIR_TEMP_COMMAND = "01 0F"
         const val THROTTLE_POSITION_COMMAND = "01 11"
         const val BATTERY_VOLTAGE_COMMAND = "01 42"
+        const val MAF_COMMAND = "01 10"                     // Added MAF command
+        const val AMBIENT_AIR_TEMP_COMMAND = "01 46"        // Added Ambient Air Temp command
     }
 
     suspend fun getEngineLoad(): Int {
-        val response = enqueueSendCommand(ENGINE_LOAD_COMMAND, OBDDataType.ENGINE_LOAD)
-        return parseEngineLoadResponse(response)
+        val responseResult = enqueueSendCommand(ENGINE_LOAD_COMMAND, OBDDataType.ENGINE_LOAD)
+        return parseEngineLoadResponse(responseResult.getOrThrow())
     }
 
     private fun parseEngineLoadResponse(response: String): Int {
@@ -393,8 +469,8 @@ class OBDService(
     }
 
     suspend fun getSpeed(): Int {
-        val response = enqueueSendCommand(SPEED_COMMAND, OBDDataType.SPEED)
-        return parseSpeedResponse(response)
+        val responseResult = enqueueSendCommand(SPEED_COMMAND, OBDDataType.SPEED)
+        return parseSpeedResponse(responseResult.getOrThrow())
     }
 
     fun parseSpeedResponse(response: String): Int {
@@ -420,8 +496,8 @@ class OBDService(
     }
 
     suspend fun getCoolantTemp(): Int {
-        val response = enqueueSendCommand(COOLANT_TEMP_COMMAND, OBDDataType.COOLANT_TEMP)
-        return parseCoolantTempResponse(response)
+        val responseResult = enqueueSendCommand(COOLANT_TEMP_COMMAND, OBDDataType.COOLANT_TEMP)
+        return parseCoolantTempResponse(responseResult.getOrThrow())
     }
 
     private fun parseCoolantTempResponse(response: String): Int {
@@ -436,8 +512,8 @@ class OBDService(
     }
 
     suspend fun getFuelLevel(): Int {
-        val response = enqueueSendCommand(FUEL_LEVEL_COMMAND, OBDDataType.FUEL_LEVEL)
-        return parseFuelLevelResponse(response)
+        val responseResult = enqueueSendCommand(FUEL_LEVEL_COMMAND, OBDDataType.FUEL_LEVEL)
+        return parseFuelLevelResponse(responseResult.getOrThrow())
     }
 
     private fun parseFuelLevelResponse(response: String): Int {
@@ -452,8 +528,8 @@ class OBDService(
     }
 
     suspend fun getIntakeAirTemp(): Int {
-        val response = enqueueSendCommand(INTAKE_AIR_TEMP_COMMAND, OBDDataType.INTAKE_AIR_TEMP)
-        return parseIntakeAirTempResponse(response)
+        val responseResult = enqueueSendCommand(INTAKE_AIR_TEMP_COMMAND, OBDDataType.INTAKE_AIR_TEMP)
+        return parseIntakeAirTempResponse(responseResult.getOrThrow())
     }
 
     private fun parseIntakeAirTempResponse(response: String): Int {
@@ -468,8 +544,8 @@ class OBDService(
     }
 
     suspend fun getThrottlePosition(): Int {
-        val response = enqueueSendCommand(THROTTLE_POSITION_COMMAND, OBDDataType.THROTTLE_POSITION)
-        return parseThrottlePositionResponse(response)
+        val responseResult = enqueueSendCommand(THROTTLE_POSITION_COMMAND, OBDDataType.THROTTLE_POSITION)
+        return parseThrottlePositionResponse(responseResult.getOrThrow())
     }
 
     private fun parseThrottlePositionResponse(response: String): Int {
@@ -484,8 +560,8 @@ class OBDService(
     }
 
     suspend fun getFuelPressure(): Int {
-        val response = enqueueSendCommand(FUEL_PRESSURE_COMMAND, OBDDataType.FUEL_PRESSURE)
-        return parseFuelPressureResponse(response)
+        val responseResult = enqueueSendCommand(FUEL_PRESSURE_COMMAND, OBDDataType.FUEL_PRESSURE)
+        return parseFuelPressureResponse(responseResult.getOrThrow())
     }
 
     private fun parseFuelPressureResponse(response: String): Int {
@@ -546,8 +622,8 @@ class OBDService(
     }
 
     suspend fun getBatteryVoltage(): Float {
-        val response = enqueueSendCommand(BATTERY_VOLTAGE_COMMAND, OBDDataType.BATTERY_VOLTAGE)
-        return parseBatteryVoltageResponse(response)
+        val responseResult = enqueueSendCommand(BATTERY_VOLTAGE_COMMAND, OBDDataType.BATTERY_VOLTAGE)
+        return parseBatteryVoltageResponse(responseResult.getOrThrow())
     }
 
     private fun parseBatteryVoltageResponse(response: String): Float {
@@ -562,8 +638,8 @@ class OBDService(
     }
 
     suspend fun getBaroPressure(): Int {
-        val response = enqueueSendCommand(BARO_PRESSURE_COMMAND, OBDDataType.BARO_PRESSURE)
-        return parseBaroPressureResponse(response)
+        val responseResult = enqueueSendCommand(BARO_PRESSURE_COMMAND, OBDDataType.BARO_PRESSURE)
+        return parseBaroPressureResponse(responseResult.getOrThrow())
     }
 
     private fun parseBaroPressureResponse(response: String): Int {
@@ -574,5 +650,100 @@ class OBDService(
             
         val hexValue = matchResult.groupValues[1]
         return hexValue.toIntOrNull(16) ?: 0  // Returns pressure in kPa
+    }
+
+    private fun parseMafResponse(response: String): Float {
+        // Look for the pattern "41 10 XX YY" where XX YY are hex values
+        val pattern = "(?:41 10|4110) ?([0-9A-F]{2}) ?([0-9A-F]{2})".toRegex(RegexOption.IGNORE_CASE)
+        val matchResult = pattern.find(response)
+            ?: throw Exception("Invalid MAF response format: $response")
+        
+        val (hexA, hexB) = matchResult.destructured
+        val byteA = hexA.toIntOrNull(16) ?: 0
+        val byteB = hexB.toIntOrNull(16) ?: 0
+        return ((byteA * 256) + byteB) / 100f  // Formula: (A*256+B)/100 g/s
+    }
+
+    private fun parseAmbientAirTempResponse(response: String): Int {
+        // Look for the pattern "41 46 XX" where XX is the hex value
+        val pattern = "(?:41 46|4146) ?([0-9A-F]{2})".toRegex(RegexOption.IGNORE_CASE)
+        val matchResult = pattern.find(response)
+            ?: throw Exception("Invalid Ambient Air Temp response format: $response")
+            
+        val hexValue = matchResult.groupValues[1]
+        val value = hexValue.toIntOrNull(16) ?: 0
+        return value - 40  // Formula: A - 40 °C
+    }
+
+    private fun resetConsecutiveErrorCount() {
+        if (consecutiveErrorCount > 0) {
+            println("OBDService: Consecutive error count reset.")
+        }
+        consecutiveErrorCount = 0
+    }
+
+    private suspend fun handleCommandError(e: Throwable) {
+        if (_connectionStatus.value != ConnectionStatus.CONNECTED) {
+            println("OBDService: Error occurred but not in CONNECTED state (${_connectionStatus.value}). Ignoring for reconnect purposes.")
+            return
+        }
+
+        consecutiveErrorCount++
+        println("OBDService: Consecutive error count: $consecutiveErrorCount/${MAX_CONSECUTIVE_ERRORS}. Error: ${e.message}")
+
+        if (consecutiveErrorCount >= MAX_CONSECUTIVE_ERRORS) {
+            println("OBDService: Max consecutive errors reached. Triggering reconnection attempt.")
+            triggerReconnectionAttempt()
+        }
+    }
+
+    private suspend fun triggerReconnectionAttempt() {
+        if (_connectionStatus.value == ConnectionStatus.RECONNECTING || _connectionStatus.value == ConnectionStatus.CONNECTING) {
+            println("OBDService: Reconnection or connection already in progress. Ignoring trigger.")
+            return
+        }
+
+        val addressToReconnect = lastDeviceAddress
+        if (addressToReconnect == null) {
+            println("OBDService: No last device address available to attempt reconnection. Disconnecting fully.")
+            disconnect()
+            _connectionStatus.value = ConnectionStatus.ERROR
+            return
+        }
+
+        println("OBDService: Preparing for reconnection. Stopping current operations.")
+        _connectionStatus.value = ConnectionStatus.RECONNECTING
+        isRunning.set(false)
+        stopCommandProcessor()
+
+        try {
+            inputStream?.close()
+            outputStream?.close()
+            socket?.close()
+            println("OBDService: Old socket and streams closed for reconnection.")
+        } catch (ioe: IOException) {
+            println("OBDService: Error closing streams/socket during reconnect prep: ${ioe.message}")
+        }
+        socket = null
+        inputStream = null
+        outputStream = null
+        
+        attemptReconnect(addressToReconnect)
+    }
+
+    private suspend fun attemptReconnect(deviceAddress: String) {
+        println("OBDService: Attempting to reconnect to $deviceAddress...")
+        delay(3000)
+
+        val result = connect(deviceAddress)
+        
+        if (result is ConnectionResult.Success) {
+            println("OBDService: Reconnection to $deviceAddress successful.")
+        } else {
+            val errorMsg = (result as? ConnectionResult.Error)?.message ?: "Unknown reconnection error"
+            println("OBDService: Reconnection to $deviceAddress failed: $errorMsg")
+            _connectionStatus.value = ConnectionStatus.ERROR
+            disconnect()
+        }
     }
 }

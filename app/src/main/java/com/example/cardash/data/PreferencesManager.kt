@@ -9,9 +9,14 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import android.content.SharedPreferences
 
 // Extension property for Context to access the DataStore
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+
+private const val PREFS_NAME = "CarDashPrefs"
+// Add keys for your preferences here
+private const val KEY_LAST_CONNECTED_DEVICE_ADDRESS = "last_connected_device_address"
 
 class PreferencesManager(private val context: Context) {
     
@@ -21,6 +26,8 @@ class PreferencesManager(private val context: Context) {
         val LOG_RETENTION_DAYS = intPreferencesKey("log_retention_days")
         val DIAGNOSTIC_MODE = booleanPreferencesKey("diagnostic_mode")
     }
+    
+    private val preferences: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     
     // Get logging enabled preference
     val loggingEnabled: Flow<Boolean> = context.dataStore.data
@@ -59,5 +66,27 @@ class PreferencesManager(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[DIAGNOSTIC_MODE] = enabled
         }
+    }
+
+    fun getLastConnectedDeviceAddress(): String? {
+        return preferences.getString(KEY_LAST_CONNECTED_DEVICE_ADDRESS, null)
+    }
+
+    fun saveLastConnectedDeviceAddress(address: String?) {
+        val editor = preferences.edit()
+        if (address == null) {
+            editor.remove(KEY_LAST_CONNECTED_DEVICE_ADDRESS)
+        } else {
+            editor.putString(KEY_LAST_CONNECTED_DEVICE_ADDRESS, address)
+        }
+        editor.apply()
+    }
+    
+    // Add other preference methods below as needed
+    fun clearAllPreferences() {
+        val editor = preferences.edit()
+        editor.clear()
+        editor.apply()
+        println("PreferencesManager: All preferences cleared.")
     }
 }

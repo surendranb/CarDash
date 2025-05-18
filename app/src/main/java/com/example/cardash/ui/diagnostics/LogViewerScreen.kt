@@ -450,6 +450,8 @@ fun getColorForDataType(dataType: OBDDataType): Color {
         OBDDataType.FUEL_PRESSURE -> Color(0xFF26A69A) // Teal
         OBDDataType.BARO_PRESSURE -> Color(0xFF78909C) // Blue Grey
         OBDDataType.BATTERY_VOLTAGE -> Color(0xFFFFEE58) // Yellow
+        OBDDataType.MAF -> Color(0xFFEC407A) // Pink
+        OBDDataType.AMBIENT_AIR_TEMP -> Color(0xFF29B6F6) // Light Blue
         OBDDataType.CONNECTION -> Color(0xFF1E88E5) // Blue
         OBDDataType.INITIALIZATION -> Color(0xFF7CB342) // Light Green
         OBDDataType.UNKNOWN -> Color(0xFF757575) // Grey

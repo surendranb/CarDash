@@ -1,6 +1,6 @@
 [versions]
 agp = "8.4.1"  # Latest stable version that supports compileSdk 35
-kotlin = "1.9.21"  # Required for compose compiler 1.5.7
+kotlin = "1.9.22"  # Required for compose compiler 1.5.8
 coreKtx = "1.15.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
@@ -8,6 +8,11 @@ espressoCore = "3.6.1"
 lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.10.1"
 composeBom = "2024.06.00"  # Latest stable version compatible with Kotlin 1.9.21
+room = "2.6.1"
+lifecycleKtx = "2.8.7"
+composeCompiler = "1.5.8" # For Kotlin 1.9.22
+androidxCarApp = "1.4.0" # Changed from 1.7.0 to 1.4.0 (latest stable)
+datastore = "1.1.1" # Added DataStore version
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -25,7 +30,21 @@ androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-man
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeKtx" } # Added ViewModel Compose
+androidx-lifecycle-viewmodelktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleKtx"}
+
+androidx-car-app = { group = "androidx.car.app", name = "app", version.ref = "androidxCarApp" } # Changed name from app-projected to app
+
+# Room
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+
+# DataStore
+androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+
+# Dependencies for the AGP
+# android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" } # This line was intended for reference, not direct use in plugins block this way

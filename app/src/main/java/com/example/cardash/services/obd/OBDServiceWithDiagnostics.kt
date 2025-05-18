@@ -88,6 +88,8 @@ class OBDServiceWithDiagnostics(
             OBDDataType.FUEL_PRESSURE -> DbOBDDataType.FUEL_PRESSURE
             OBDDataType.BARO_PRESSURE -> DbOBDDataType.BARO_PRESSURE
             OBDDataType.BATTERY_VOLTAGE -> DbOBDDataType.BATTERY_VOLTAGE
+            OBDDataType.MAF -> DbOBDDataType.MAF
+            OBDDataType.AMBIENT_AIR_TEMP -> DbOBDDataType.AMBIENT_AIR_TEMP
             OBDDataType.CONNECTION -> DbOBDDataType.CONNECTION
             OBDDataType.INITIALIZATION -> DbOBDDataType.INITIALIZATION
             OBDDataType.UNKNOWN -> DbOBDDataType.UNKNOWN

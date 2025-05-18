@@ -37,18 +37,13 @@ class CarDashApp : Application() {
     }
 
     // Base OBD service with sequential command queue
-    private val baseObdService: OBDService by lazy {
-        OBDService(bluetoothManager)
+    val obdService: OBDService by lazy {
+        OBDService(bluetoothManager, applicationScope)
     }
     
     // OBD service with diagnostics wrapping the base service
-    val obdService: OBDService by lazy {
-        baseObdService
-    }
-    
-    // Diagnostics service wrapper - can be used directly for logging
     val obdServiceDiagnostics: OBDServiceWithDiagnostics by lazy {
-        OBDServiceWithDiagnostics(baseObdService, applicationContext)
+        OBDServiceWithDiagnostics(obdService, applicationContext)
     }
     
     val mockDataGenerator: MockDataGenerator by lazy {

@@ -78,6 +78,7 @@ import com.example.cardash.ui.theme.Success
 import com.example.cardash.ui.theme.Warning
 import com.example.cardash.ui.theme.Error as ThemeError
 import com.example.cardash.ui.theme.Neutral
+import android.annotation.SuppressLint
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTextApi::class)
 @Composable
@@ -101,7 +102,7 @@ fun MainScreen(
     var selectedTab by remember { mutableIntStateOf(0) }
     var showDeviceDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
-    val devices by remember { mutableStateOf(bluetoothManager.getPairedDevices()) }
+    var devices by remember { mutableStateOf(emptySet<BluetoothDevice>()) }
     
     val connectionState by viewModel.connectionState.collectAsState()
     val engineRunning by viewModel.engineRunning.collectAsState()
@@ -197,7 +198,11 @@ fun MainScreen(
                     
                     // OBD Connection button
                     IconButton(
-                        onClick = { showDeviceDialog = true },
+                        onClick = { 
+                            // Refresh devices list every time the dialog is about to be shown
+                            devices = bluetoothManager.getPairedDevices()
+                            showDeviceDialog = true 
+                        },
                         modifier = Modifier.size(48.dp)
                     ) {
                         // Use different colors based on connection state
@@ -334,6 +339,7 @@ fun CombinedStatusBar(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@SuppressLint("MissingPermission") // Suppress lint for device.name and device.address
 @Composable
 fun DeviceSelectionDialog(
     devices: Set<BluetoothDevice>,
