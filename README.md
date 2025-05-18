@@ -86,6 +86,15 @@ Your vehicle data belongs to you alone. Period.
    * Once connected, your vehicle's metrics will appear on the dashboard
    * Customize your view using the settings menu
 
+## 📦 Download & Internal Testing
+
+CarDash is available for internal testing via Google Play:
+
+- **Join the internal test group:** [Join here](https://play.google.com/apps/internaltest/4700669721171506027)
+- **Download the app:** [Direct Play Store link](https://play.google.com/apps/test/com.fuseforge.cardash/5)
+
+> **Note:** You must join the internal test group before you can download or update the app from the Play Store.
+
 ## 🔄 Current Status
 
 ### What's Working
@@ -95,9 +104,10 @@ Your vehicle data belongs to you alone. Period.
 ✅ Basic diagnostic logging and session history  
 ✅ Multiple tabs for different functionality (Metrics, Trends, Diagnostics, History)  
 ✅ Settings customization for tab visibility and data collection frequency  
+✅ **Android Auto Integration (Beta):** View your vehicle metrics on your car's infotainment display (currently as a simple list; more features and improved UI coming soon)  
+✅ **Available on Play Store internal test** ([see above](#download--internal-testing))
 
 ### What's In Development
-🔄 **Android Auto Integration** - View your vehicle metrics directly on your car's infotainment display  
 🔄 **Gemini AI Integration** - Advanced diagnostics and predictive maintenance using Google's Gemini AI  
 🔄 Enhanced diagnostic trouble code (DTC) interpretation  
 🔄 Trip logging and analysis  
@@ -109,6 +119,9 @@ Your vehicle data belongs to you alone. Period.
 ⚠️ Battery voltage reading accuracy depends on OBD-II adapter quality  
 ⚠️ Not all metrics are supported by all vehicles (manufacturer dependent)  
 ⚠️ Performance may vary based on vehicle's OBD-II implementation  
+⚠️ **Android Auto UI is currently single-column only (list view); grid or two-column layouts are not yet supported**  
+
+> **Note:** Android Auto UI may look different from the phone UI. See in-app for the latest appearance.
 
 ## ### 🚗 Android Auto Integration Setup
 
@@ -130,7 +143,7 @@ For developers looking to work on or understand the Android Auto integration for
         *   It requires a category declaration (e.g., `androidx.car.app.category.IOT` for an Internet of Things type app, which suits CarDash).
         ```xml
         <service
-            android:name=".services.auto.CarDashCarAppService"  
+            android:name="com.fuseforge.cardash.services.auto.CarDashCarAppService"  
             android:exported="true"
             android:label="@string/app_name">
             <intent-filter>
