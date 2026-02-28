@@ -17,6 +17,7 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "se
 private const val PREFS_NAME = "CarDashPrefs"
 // Add keys for your preferences here
 private const val KEY_LAST_CONNECTED_DEVICE_ADDRESS = "last_connected_device_address"
+private const val KEY_VEHICLE_PROFILE = "vehicle_profile"
 
 class PreferencesManager(private val context: Context) {
     
@@ -106,6 +107,14 @@ class PreferencesManager(private val context: Context) {
 
     fun getStorageFrequency(): Long {
         return preferences.getInt("storage_frequency", 5000).toLong()
+    }
+
+    fun getVehicleProfile(): String {
+        return preferences.getString(KEY_VEHICLE_PROFILE, "") ?: ""
+    }
+
+    fun setVehicleProfile(profile: String) {
+        preferences.edit().putString(KEY_VEHICLE_PROFILE, profile).apply()
     }
 
     // Add other preference methods below as needed

@@ -38,9 +38,14 @@ class GeminiPromptBuilder(private val context: Context) {
             // 3. Aggregate data
             val summary = aggregateData(dataPoints)
 
+            val prefsManager = com.fuseforge.cardash.data.PreferencesManager(context)
+            val vehicleStr = prefsManager.getVehicleProfile()
+            val vehicleContextStr = if (vehicleStr.isNotBlank()) "I am driving a $vehicleStr." else "I am providing you with general telematics data."
+
             // 4. Construct the prompt
             return@withContext """
-                Act as an expert automotive mechanic and data analyst. 
+                Act as an expert automotive mechanic and data analyst.
+                $vehicleContextStr
                 I am providing you with OBD2 telematics data collected from my vehicle over the last $days days ($dateRangeStr).
                 
                 Please analyze this data and provide:

@@ -9,8 +9,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuseforge.cardash.data.preferences.AppPreferences
+import com.fuseforge.cardash.data.PreferencesManager
 import com.fuseforge.cardash.ui.metrics.MetricViewModel
 
 @Composable
@@ -35,6 +37,10 @@ fun SettingsDialog(
     LaunchedEffect(verboseLoggingEnabled) {
         verboseLoggingState = verboseLoggingEnabled
     }
+    
+    val context = LocalContext.current
+    val prefsManager = remember { PreferencesManager(context) }
+    var vehicleProfile by remember { mutableStateOf(prefsManager.getVehicleProfile()) }
     
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
@@ -102,6 +108,37 @@ fun SettingsDialog(
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
+                Divider()
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Vehicle Profile
+                Text(
+                    text = "Vehicle Profile",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                OutlinedTextField(
+                    value = vehicleProfile,
+                    onValueChange = { 
+                        vehicleProfile = it
+                        prefsManager.setVehicleProfile(it)
+                    },
+                    label = { Text("Make & Model (Optional)") },
+                    placeholder = { Text("e.g. 2018 Toyota RAV4") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                
+                Text(
+                    text = "Helps Gemini AI provide better insights for your specific car.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+                )
+
                 Divider()
                 
                 Spacer(modifier = Modifier.height(16.dp))
