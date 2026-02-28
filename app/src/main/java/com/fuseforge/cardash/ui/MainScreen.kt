@@ -56,6 +56,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -89,13 +91,16 @@ import com.fuseforge.cardash.ui.theme.Neutral
 import android.annotation.SuppressLint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import android.location.LocationManager
 import android.content.Context
 import android.content.Intent
 import com.fuseforge.cardash.utils.GeminiPromptBuilder
+import com.fuseforge.cardash.utils.MockDataSeeder
 import androidx.compose.material3.CircularProgressIndicator
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalTextApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalTextApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun MainScreen(
     onPermissionNeeded: () -> Unit = {}
@@ -243,36 +248,61 @@ fun MainScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        IconButton(
-                            onClick = { 
-                                scope.launch {
-                                    isGeneratingPrompt = true
-                                    snackbarHostState.showSnackbar("Gathering 7-day OBD intelligence...")
-                                    
-                                    val builder = GeminiPromptBuilder(context)
-                                    val prompt = builder.buildPromptForLastNDays(7)
-                                    
-                                    isGeneratingPrompt = false
-                                    
-                                    if (prompt != null) {
-                                        val sendIntent = Intent().apply {
-                                            action = Intent.ACTION_SEND
-                                            putExtra(Intent.EXTRA_TEXT, prompt)
-                                            type = "text/plain"
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(24.dp))
+                                .combinedClickable(
+                                    onClick = {
+                                        scope.launch {
+                                            isGeneratingPrompt = true
+                                            snackbarHostState.showSnackbar("Gathering 7-day OBD intelligence...")
+                                            
+                                            val builder = GeminiPromptBuilder(context)
+                                            val prompt = builder.buildPromptForLastNDays(7)
+                                            
+                                            isGeneratingPrompt = false
+                                            
+                                            if (prompt != null) {
+                                                val sendIntent = Intent().apply {
+                                                    action = Intent.ACTION_SEND
+                                                    putExtra(Intent.EXTRA_TEXT, prompt)
+                                                    type = "text/plain"
+                                                }
+                                                val shareIntent = Intent.createChooser(sendIntent, "Analyze with Gemini")
+                                                context.startActivity(shareIntent)
+                                            } else {
+                                                // Fallback for basic flow testing when DB is empty
+                                                val sendIntent = Intent().apply {
+                                                    action = Intent.ACTION_SEND
+                                                    putExtra(Intent.EXTRA_TEXT, "Act as an expert mechanic. There is no recent OBD data to analyze yet, but I am testing the Gemini integration flow.")
+                                                    type = "text/plain"
+                                                }
+                                                val shareIntent = Intent.createChooser(sendIntent, "Analyze with Gemini")
+                                                context.startActivity(shareIntent)
+                                            }
                                         }
-                                        val shareIntent = Intent.createChooser(sendIntent, "Analyze with Gemini")
-                                        context.startActivity(shareIntent)
-                                    } else {
-                                        snackbarHostState.showSnackbar("Not enough recent data for analysis.")
+                                    },
+                                    onLongClick = {
+                                        scope.launch {
+                                            isGeneratingPrompt = true
+                                            snackbarHostState.showSnackbar("Injecting 7 days of Mock Data...")
+                                            val success = MockDataSeeder.seedRecentData(context)
+                                            if (success) {
+                                                snackbarHostState.showSnackbar("Mock data seeded successfully! Tap Sparkle again.")
+                                            } else {
+                                                snackbarHostState.showSnackbar("Failed to seed mock data.")
+                                            }
+                                            isGeneratingPrompt = false
+                                        }
                                     }
-                                }
-                            },
-                            modifier = Modifier.size(48.dp)
+                                ),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.Star,
-                                contentDescription = "Analyze with AI",
-                                tint = androidx.compose.ui.graphics.Color(0xFFFFD700) // Gold color for sparkle
+                            androidx.compose.foundation.Image(
+                                painter = painterResource(id = com.fuseforge.cardash.R.drawable.ic_gemini_sparkle),
+                                contentDescription = "Analyze with Gemini",
+                                modifier = Modifier.size(28.dp)
                             )
                         }
                     }
