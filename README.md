@@ -100,25 +100,23 @@ CarDash is available for internal testing via Google Play:
 
 > **Note:** You must join the internal test group before you can download or update the app from the Play Store.
 
-## 🔄 Current Status
+## 🔄 Project Roadmap
 
-### What's Working
-✅ Bluetooth connection to most standard ELM327 OBD-II adapters  
-✅ Real-time display of vehicle metrics with customizable dashboard  
-✅ Basic graph visualization of metrics over time  
-✅ Basic diagnostic logging and session history  
-✅ Multiple tabs for different functionality (Metrics, Trends, Diagnostics, History)  
-✅ Settings customization for tab visibility and data collection frequency  
-✅ **Android Auto Integration (Beta):** View your vehicle metrics on your car's infotainment display (currently as a simple list; more features and improved UI coming soon)  
-✅ **Available on Play Store internal test** ([see above](#download--internal-testing))
+### Recently Added (v1.6.0)
+- ✅ **Vehicle Profiles**: Manufacturer-specific context for smarter AI analysis.
+- ✅ **Android Auto Integration**: View real-time metrics on your vehicle's HUD.
+- ✅ **Gemini AI Diagnostics**: Advanced engine health insights.
 
-### What's In Development
-✅ **Gemini AI Integration** - Advanced diagnostics and predictive maintenance using Google's Gemini AI  
-✅ **Vehicle Profiles** - Manufacturer-specific context for improved AI accuracy  
-🔄 Enhanced diagnostic trouble code (DTC) interpretation  
-🔄 Trip logging and analysis  
-🔄 Fuel economy calculations  
-🔄 Expanded vehicle compatibility testing  
+### Core Features
+- ✅ **Bluetooth OBD-II**: Seamless connection to standard ELM327 adapters.
+- ✅ **Custom Dashboard**: Arrange 10+ vital vehicle metrics to your liking.
+- ✅ **Historical Trends**: Graph visualization of engine data across trips.
+- ✅ **Offline-First**: All data is stored locally with absolute privacy.
+
+### Upcoming
+- 🔄 Enhanced DTC (Error Code) interpretation.
+- 🔄 Detailed trip logging and fuel economy analysis.
+- 🔄 Expanded manufacturer-specific OBD-II PID support.
 
 ### Known Limitations
 ⚠️ Fuel pressure readings may be unavailable on some vehicles  
@@ -129,89 +127,20 @@ CarDash is available for internal testing via Google Play:
 
 > **Note:** Android Auto UI may look different from the phone UI. See in-app for the latest appearance.
 
-## ### 🚗 Android Auto Integration Setup
+## � Download & Internal Testing
 
-For developers looking to work on or understand the Android Auto integration for CarDash, the following manifest configurations are crucial for the app to be recognized and run correctly on an Android Auto unit (including the Desktop Head Unit - DHU):
+CarDash is available for internal testing via Google Play. Using the Play Store is the most reliable way to ensure Android Auto visibility on modern devices.
 
-1.  **`AndroidManifest.xml` Core Components:**
+- **Join the test group:** [Join here](https://play.google.com/apps/internaltest/4700669721171506027)
+- **Download the app:** [Direct Play Store link](https://play.google.com/apps/test/com.fuseforge.cardash/5)
 
-    *   **Uses Library:** Declare that the app uses the `androidx.car.app` library. It's recommended to set `android:required="false"` to allow installation on devices without the Android Auto framework, which simplifies development and testing of the phone app components.
-        ```xml
-        <application ...>
-            <uses-library android:name="androidx.car.app" android:required="false"/>
-            ...
-        </application>
-        ```
+---
 
-    *   **Car App Service:** This service is the entry point for Android Auto.
-        *   It must be exported.
-        *   It needs an intent filter for the `androidx.car.app.CarAppService` action.
-        *   It requires a category declaration (e.g., `androidx.car.app.category.IOT` for an Internet of Things type app, which suits CarDash).
-        ```xml
-        <service
-            android:name="com.fuseforge.cardash.services.auto.CarDashCarAppService"  
-            android:exported="true"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="androidx.car.app.CarAppService" />
-                <category android:name="androidx.car.app.category.IOT" />
-            </intent-filter>
-        </service>
-        ```
+## 🛠️ Developer Resources
 
-    *   **Application-Level Meta-Data:**
-        *   **Automotive App Description:** This links to an XML file (typically `res/xml/automotive_app_desc.xml`) that declares the app uses automotive templates.
-            ```xml
-            <application ...>
-                ...
-                <meta-data
-                    android:name="com.google.android.gms.car.application"
-                    android:resource="@xml/automotive_app_desc" />
-                ...
-            </application>
-            ```
-        *   **Minimum Car API Level:** This declares the minimum version of the Car App Library the app is compatible with.
-            ```xml
-            <application ...>
-                ...
-                <meta-data
-                    android:name="androidx.car.app.minCarApiLevel"
-                    android:value="1" />
-                ...
-            </application>
-            ```
+For details on manifest configuration, Desktop Head Unit (DHU) testing, and production signing, please refer to the [Developer Guide](DEVELOPER.md).
 
-2.  **`res/xml/automotive_app_desc.xml`:**
-    This file is referenced by the `com.google.android.gms.car.application` meta-data in the manifest. It must declare that the app uses templates.
-    ```xml
-    <?xml version="1.0" encoding="utf-8"?>
-    <automotiveApp>
-        <uses name="template" />
-    </automotiveApp>
-    ```
-
-Ensuring these elements are correctly configured is the first step to getting your Android Auto app recognized by the system and appearing in the launcher on the head unit.
-
-> [!IMPORTANT]
-> **Android 14+ Distribution Note**: 
-> Google has introduced strict security measures for "Unknown Sources" on newer Android versions. While sideloading with "Unknown Sources" enabled is possible, the most reliable way to ensure CarDash appears in your car HUD is to distribute it through the **Google Play Store Internal Testing** track. This ensures the app is "blessed" by Google Play Services and bypasses all restricted intent blocks.
-
-3.  **Enabling Developer Mode for Android Auto (On Phone):**
-    To test your app, including on the Desktop Head Unit (DHU), you need to enable developer mode in the Android Auto application on your phone:
-    *   Open the Android Auto app on your phone.
-    *   Go to **Settings**.
-    *   Scroll down to the **Version** number and tap it repeatedly (usually 7-10 times) until you see a toast message saying "Developer mode enabled" or a dialog asking to enable developer settings.
-    *   Once enabled, you can access developer settings via the three-dot menu (⋮) in the top-right corner of the Android Auto settings screen. This is where you can enable "Unknown sources" to run development builds from Android Studio and start the Head Unit Server for DHU.
-
-4.  **Testing with the Desktop Head Unit (DHU):**
-    The DHU allows you to simulate an Android Auto head unit on your development machine.
-    *   **Install DHU:** If you haven't already, download the DHU from the Android Studio SDK Manager. It's typically found under "SDK Tools" -> "Android Auto Desktop Head Unit emulator".
-    *   **Enable Head Unit Server:** In the Android Auto app's developer settings on your phone (see step 3), enable "Start head unit server".
-    *   **Connect Phone:** Connect your phone to your computer via USB.
-    *   **Start DHU:**
-        *   On **macOS/Linux**, navigate to `~/Library/Android/sdk/extras/google/auto/` (macOS) or `~/Android/Sdk/extras/google/auto/` (Linux) in your terminal and run `desktop-head-unit`.
-        *   On **Windows**, navigate to `C:\Users\<YourUser>\AppData\Local\Android\Sdk\extras\google\auto\` in Command Prompt or PowerShell and run `desktop-head-unit.exe`.
-    *   The DHU should launch and connect to your phone, allowing you to see and test your CarDash app as it would appear on a car screen.
+---
 
 ## 📄 License
 
@@ -219,11 +148,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgements
 
-* [ELM327 Documentation](https://www.elmelectronics.com/products/ecutool/obdic/) for protocol specifications
-* [OBD-II PIDs Reference](https://en.wikipedia.org/wiki/OBD-II_PIDs) for parameter definitions
-* Android Jetpack libraries for modern Android development
-
----
+* [ELM327 Documentation](https://www.elmelectronics.com/products/ecutool/obdic/)
+* [OBD-II PIDs Reference](https://en.wikipedia.org/wiki/OBD-II_PIDs)
+* Android Jetpack libraries
 
 <div align="center">
   <i>CarDash is an independent project not affiliated with any automotive manufacturer.</i><br>
