@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -90,6 +91,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import android.location.LocationManager
 import android.content.Context
+import android.content.Intent
+import com.fuseforge.cardash.utils.GeminiPromptBuilder
+import androidx.compose.material3.CircularProgressIndicator
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTextApi::class)
 @Composable
@@ -114,6 +118,7 @@ fun MainScreen(
     var showDeviceDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
     var devices by remember { mutableStateOf(emptySet<BluetoothDevice>()) }
+    var isGeneratingPrompt by remember { mutableStateOf(false) }
     
     val connectionState by viewModel.connectionState.collectAsState()
     val engineRunning by viewModel.engineRunning.collectAsState()
@@ -229,6 +234,48 @@ fun MainScreen(
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
+                    
+                    // Gemini AI Analysis Button
+                    if (isGeneratingPrompt) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.secondary,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        IconButton(
+                            onClick = { 
+                                scope.launch {
+                                    isGeneratingPrompt = true
+                                    snackbarHostState.showSnackbar("Gathering 7-day OBD intelligence...")
+                                    
+                                    val builder = GeminiPromptBuilder(context)
+                                    val prompt = builder.buildPromptForLastNDays(7)
+                                    
+                                    isGeneratingPrompt = false
+                                    
+                                    if (prompt != null) {
+                                        val sendIntent = Intent().apply {
+                                            action = Intent.ACTION_SEND
+                                            putExtra(Intent.EXTRA_TEXT, prompt)
+                                            type = "text/plain"
+                                        }
+                                        val shareIntent = Intent.createChooser(sendIntent, "Analyze with Gemini")
+                                        context.startActivity(shareIntent)
+                                    } else {
+                                        snackbarHostState.showSnackbar("Not enough recent data for analysis.")
+                                    }
+                                }
+                            },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Star,
+                                contentDescription = "Analyze with AI",
+                                tint = androidx.compose.ui.graphics.Color(0xFFFFD700) // Gold color for sparkle
+                            )
+                        }
+                    }
                     
                     // OBD Connection button
                     IconButton(
