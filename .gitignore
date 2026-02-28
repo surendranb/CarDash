@@ -1,3 +1,5 @@
+# Standard Android .gitignore
+# Built-in ignore list for Android Studio / IntelliJ IDEA
 *.iml
 .gradle
 /local.properties
@@ -7,10 +9,39 @@
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+/.idea/deploymentTargetSelector.xml
+/.idea/modules/
+/.idea/
 .DS_Store
 /build
 /captures
 .externalNativeBuild
 .cxx
 local.properties
-OBD_ISSUES_TODO.md
+
+# VS Code ignore
+.vscode/
+
+# Build artifacts
+*.apk
+*.aab
+app/release/
+
+# Local databases
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Log files
+*.log
+
+# Design / Scratch files
+PROGRESS.md
+METRIC_IMPLEMENTATION_GUIDE.md
+METRIC_TROUBLESHOOTING.md
+swap_files.sh
+
+# Gradle
+.gradle/
+build/
