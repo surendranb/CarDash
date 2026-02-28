@@ -46,6 +46,11 @@ Your vehicle data belongs to you alone. Period.
 * **System Status**: Fuel level, fuel pressure, barometric pressure, and battery voltage
 * **Customizable Layout**: Arrange metrics in your preferred dashboard configuration
 
+### 🧠 AI Insights & Vehicle Profiles
+* **Gemini AI Analysis**: Get real-time health insights based on your engine data.
+* **Vehicle Context**: Save your car's Make and Model to help the AI provide manufacturer-specific diagnostic advice.
+* **Explainable Diagnostics**: Visual cues for metric thresholds (Green/Yellow/Red).
+
 ### 📈 Data Visualization
 * **Basic Graphs**: View trends of your vehicle's parameters
 * **Historical Data**: See how metrics change over time
@@ -108,7 +113,8 @@ CarDash is available for internal testing via Google Play:
 ✅ **Available on Play Store internal test** ([see above](#download--internal-testing))
 
 ### What's In Development
-🔄 **Gemini AI Integration** - Advanced diagnostics and predictive maintenance using Google's Gemini AI  
+✅ **Gemini AI Integration** - Advanced diagnostics and predictive maintenance using Google's Gemini AI  
+✅ **Vehicle Profiles** - Manufacturer-specific context for improved AI accuracy  
 🔄 Enhanced diagnostic trouble code (DTC) interpretation  
 🔄 Trip logging and analysis  
 🔄 Fuel economy calculations  
@@ -185,6 +191,10 @@ For developers looking to work on or understand the Android Auto integration for
     ```
 
 Ensuring these elements are correctly configured is the first step to getting your Android Auto app recognized by the system and appearing in the launcher on the head unit.
+
+> [!IMPORTANT]
+> **Android 14+ Distribution Note**: 
+> Google has introduced strict security measures for "Unknown Sources" on newer Android versions. While sideloading with "Unknown Sources" enabled is possible, the most reliable way to ensure CarDash appears in your car HUD is to distribute it through the **Google Play Store Internal Testing** track. This ensures the app is "blessed" by Google Play Services and bypasses all restricted intent blocks.
 
 3.  **Enabling Developer Mode for Android Auto (On Phone):**
     To test your app, including on the Desktop Head Unit (DHU), you need to enable developer mode in the Android Auto application on your phone:
