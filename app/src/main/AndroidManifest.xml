@@ -45,6 +45,11 @@
             android:name="androidx.car.app.minCarApiLevel"
             android:value="1" />
 
+        <!--  Essential for discovery on real head units -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
+
         <activity
             android:name=".MainActivity" 
             android:exported="true"
@@ -78,6 +83,7 @@
             <intent-filter>
                 <action android:name="androidx.car.app.CarAppService" />
                 <category android:name="androidx.car.app.category.IOT" />
+                <category android:name="androidx.car.app.category.SETTINGS" />
             </intent-filter>
         </service>
 

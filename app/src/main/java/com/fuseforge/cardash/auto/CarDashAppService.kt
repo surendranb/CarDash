@@ -14,6 +14,7 @@ class CarDashAppService : CarAppService() {
         } else {
             HostValidator.Builder(applicationContext)
                 .addAllowedHosts(androidx.car.app.R.array.hosts_allowlist_sample)
+                .addAllowedHosts(com.fuseforge.cardash.R.array.hosts_allowlist_sample) // Ensure local refers to same if defined
                 .build()
         }
     }
