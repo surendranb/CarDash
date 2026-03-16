@@ -14,7 +14,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
                      android:maxSdkVersion="28" />
 
-    <uses-feature android:name="android.hardware.type.automotive" android:required="false" />
+    <!-- Removed android.hardware.type.automotive as it conflicts with com.google.android.gms.car.application on Play Console -->
     <uses-feature android:name="android.software.car.templates.host" android:required="false" />
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
