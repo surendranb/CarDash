@@ -14,8 +14,6 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
                      android:maxSdkVersion="28" />
 
-    <!-- Removed android.hardware.type.automotive as it conflicts with com.google.android.gms.car.application on Play Console -->
-    <uses-feature android:name="android.software.car.templates.host" android:required="false" />
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"/>
@@ -83,7 +81,6 @@
             <intent-filter>
                 <action android:name="androidx.car.app.CarAppService" />
                 <category android:name="androidx.car.app.category.IOT" />
-                <category android:name="androidx.car.app.category.SETTINGS" />
             </intent-filter>
         </service>
 
