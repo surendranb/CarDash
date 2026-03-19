@@ -27,16 +27,37 @@ class GeminiPromptBuilder(private val context: Context) {
             val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.US)
             val dateRangeStr = "${dateFormat.format(startDate)} to ${dateFormat.format(endDate)}"
 
-            // 2. Fetch the data
-            val dataPointsFlow = db.obdLogDao().getTripDataPointsByTimeRange(startDate, endDate)
-            val dataPoints = dataPointsFlow.firstOrNull()
+            // 2. Fetch all trips and filter by date
+            val allTripsFlow = db.obdLogDao().getAllTrips()
+            val allTrips = allTripsFlow.firstOrNull() ?: emptyList()
+            val recentTrips = allTrips.filter { it.startTime.after(startDate) }
 
-            if (dataPoints.isNullOrEmpty()) {
+            if (recentTrips.isEmpty()) {
                 return@withContext null
             }
 
-            // 3. Aggregate data
-            val summary = aggregateData(dataPoints)
+            // 3. Aggregate data per trip
+            val tripRows = mutableListOf<String>()
+            val tableHeader = "| Date | Duration | Avg Speed (km/h) | Max Speed | Avg RPM | Max RPM | Avg Load | Max Temp |\n|---|---|---|---|---|---|---|---|"
+            
+            for (trip in recentTrips) {
+                // Fetch up to 10,000 points per trip to ensure we get a good average
+                val points = db.obdLogDao().getTripDataPoints(trip.tripId, 10000).firstOrNull() ?: emptyList()
+                if (points.isNotEmpty()) {
+                    val summary = aggregateData(points)
+                    val durationMs = (trip.endTime?.time ?: endDate.time) - trip.startTime.time
+                    val durationMins = durationMs / 60000
+                    val dateStr = SimpleDateFormat("MMM dd HH:mm", Locale.US).format(trip.startTime)
+                    
+                    tripRows.add("| $dateStr | ${durationMins}m | ${summary.avgSpeed} | ${summary.maxSpeed} | ${summary.avgRpm} | ${summary.maxRpm} | ${summary.avgLoad}% | ${summary.maxCoolantTemp}°C |")
+                }
+            }
+
+            if (tripRows.isEmpty()) {
+                return@withContext null
+            }
+
+            val tableMarkdown = tableHeader + "\n" + tripRows.joinToString("\n")
 
             val prefsManager = com.fuseforge.cardash.data.PreferencesManager(context)
             val vehicleStr = prefsManager.getVehicleProfile()
@@ -46,38 +67,17 @@ class GeminiPromptBuilder(private val context: Context) {
             return@withContext """
                 Act as an expert automotive mechanic and data analyst.
                 $vehicleContextStr
-                I am providing you with OBD2 telematics data collected from my vehicle over the last $days days ($dateRangeStr).
+                I am providing you with a log of my individual driving trips over the last $days days ($dateRangeStr).
                 
-                Please analyze this data and provide:
-                1. A general health assessment of the vehicle.
-                2. Any anomalies or areas of concern (e.g., high temperatures, low battery, erratic RPMs).
-                3. Driving habit insights based on speed, RPM, and engine load.
+                Please analyze this tabular trip data and provide:
+                1. A general health assessment of the vehicle across these trips.
+                2. Any anomalies, trends, or areas of concern (e.g., consistently high temperatures, erratic RPMs on certain trips).
+                3. Driving habit insights based on the variations in speed, RPM, duration, and engine load across different trips.
                 4. Recommendations for upcoming maintenance based on this snapshot.
 
-                Here is the aggregated data summary:
+                Here is the tabular history of my recent trips:
                 
-                - Total Data Points Recorded: ${dataPoints.size}
-                
-                **Engine Performance:**
-                - Average RPM: ${summary.avgRpm}
-                - Max RPM: ${summary.maxRpm}
-                - Average Engine Load: ${summary.avgLoad}%
-                - Max Engine Load: ${summary.maxLoad}%
-                
-                **Temperatures:**
-                - Average Coolant Temp: ${summary.avgCoolantTemp}°C
-                - Max Coolant Temp: ${summary.maxCoolantTemp}°C
-                - Average Intake Air Temp: ${summary.avgIntakeTemp}°C
-                - Max Intake Air Temp: ${summary.maxIntakeTemp}°C
-                
-                **Speeds:**
-                - Average Speed (OBD): ${summary.avgSpeed} km/h
-                - Max Speed (OBD): ${summary.maxSpeed} km/h
-                
-                **Electrical / Fuel:**
-                - Average Battery Voltage: ${summary.avgVoltage}V
-                - Min Battery Voltage: ${summary.minVoltage}V
-                - Average Fuel Level: ${summary.avgFuel}%
+                $tableMarkdown
                 
             """.trimIndent()
 
