@@ -18,7 +18,7 @@ class CarDashAppService : CarAppService() {
     override fun onCreateSession(): Session {
         return object : Session() {
             override fun onCreateScreen(intent: Intent): Screen {
-                return MainCarScreen(carContext)
+                return MetricsCarScreen(carContext)
             }
         }
     }

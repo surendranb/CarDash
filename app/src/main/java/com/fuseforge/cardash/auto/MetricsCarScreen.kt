@@ -7,6 +7,7 @@ import androidx.car.app.CarContext
 import androidx.car.app.Screen
 import androidx.car.app.model.Action
 import androidx.car.app.model.CarColor
+import androidx.car.app.model.CarIcon
 import androidx.car.app.model.ForegroundCarColorSpan
 import androidx.car.app.model.GridItem
 import androidx.car.app.model.GridTemplate
@@ -151,12 +152,13 @@ class MetricsCarScreen(carContext: CarContext) : Screen(carContext) {
         val itemListBuilder = ItemList.Builder()
 
         // Create the 6 GridItems with the formatted CharSequences
-        itemListBuilder.addItem(GridItem.Builder().setTitle(rpmText).setText("Engine RPM").build())
-        itemListBuilder.addItem(GridItem.Builder().setTitle(engineLoadText).setText("Engine Load").build())
-        itemListBuilder.addItem(GridItem.Builder().setTitle(coolantTempText).setText("Coolant Temp").build())
-        itemListBuilder.addItem(GridItem.Builder().setTitle(voltageText).setText("Battery / Module").build())
-        itemListBuilder.addItem(GridItem.Builder().setTitle(throttlePosText).setText("Throttle Position").build())
-        itemListBuilder.addItem(GridItem.Builder().setTitle(intakeAirTempText).setText("Intake Air Temp").build())
+        // Every GridItem MUST have an image set (or isLoading set to true) to prevent IllegalStateException
+        itemListBuilder.addItem(GridItem.Builder().setTitle(rpmText).setText("Engine RPM").setImage(CarIcon.APP_ICON).build())
+        itemListBuilder.addItem(GridItem.Builder().setTitle(engineLoadText).setText("Engine Load").setImage(CarIcon.APP_ICON).build())
+        itemListBuilder.addItem(GridItem.Builder().setTitle(coolantTempText).setText("Coolant Temp").setImage(CarIcon.APP_ICON).build())
+        itemListBuilder.addItem(GridItem.Builder().setTitle(voltageText).setText("Battery / Module").setImage(CarIcon.APP_ICON).build())
+        itemListBuilder.addItem(GridItem.Builder().setTitle(throttlePosText).setText("Throttle Position").setImage(CarIcon.APP_ICON).build())
+        itemListBuilder.addItem(GridItem.Builder().setTitle(intakeAirTempText).setText("Intake Air Temp").setImage(CarIcon.APP_ICON).build())
 
         return GridTemplate.Builder()
             .setSingleList(itemListBuilder.build())
