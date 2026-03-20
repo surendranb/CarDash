@@ -59,6 +59,10 @@ interface OBDLogDao {
     @Query("SELECT * FROM trips ORDER BY startTime DESC")
     fun getAllTrips(): Flow<List<Trip>>
     
+    // Get trips list instantly for one-shot AI prompt generation
+    @Query("SELECT * FROM trips ORDER BY startTime DESC")
+    suspend fun getAllTripsInstant(): List<Trip>
+
     // Close active trip
     @Query("UPDATE trips SET endTime = :endTime WHERE endTime IS NULL")
     suspend fun closeActiveTrips(endTime: Date = Date())
@@ -80,6 +84,10 @@ interface OBDLogDao {
     // Get combined readings for a specific session
     @Query("SELECT * FROM trip_data_points WHERE tripId = :tripId ORDER BY timestamp DESC LIMIT :limit")
     fun getTripDataPoints(tripId: String, limit: Int = 25): Flow<List<TripDataPoint>>
+    
+    // Get combined readings instantly for a specific session (AI generation)
+    @Query("SELECT * FROM trip_data_points WHERE tripId = :tripId ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun getTripDataPointsInstant(tripId: String, limit: Int = 10000): List<TripDataPoint>
     
     // Get combined readings from a specific time period
     @Query("SELECT * FROM trip_data_points WHERE timestamp BETWEEN :startTime AND :endTime ORDER BY timestamp DESC")

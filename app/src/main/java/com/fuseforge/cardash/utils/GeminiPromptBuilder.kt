@@ -27,12 +27,12 @@ class GeminiPromptBuilder(private val context: Context) {
             val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.US)
             val dateRangeStr = "${dateFormat.format(startDate)} to ${dateFormat.format(endDate)}"
 
-            // 2. Fetch all trips and filter by date
-            val allTripsFlow = db.obdLogDao().getAllTrips()
-            val allTrips = allTripsFlow.firstOrNull() ?: emptyList()
+            // 2. Fetch all trips and filter by date (using one-shot query to avoid Flow completion races)
+            val allTrips = db.obdLogDao().getAllTripsInstant()
             val recentTrips = allTrips.filter { it.startTime.after(startDate) }
 
             if (recentTrips.isEmpty()) {
+                Log.d("GeminiPromptBuilder", "No trips found in the last $days days.")
                 return@withContext null
             }
 
@@ -41,8 +41,8 @@ class GeminiPromptBuilder(private val context: Context) {
             val tableHeader = "| Date | Duration | Avg Speed (km/h) | Max Speed | Avg RPM | Max RPM | Avg Load | Max Temp |\n|---|---|---|---|---|---|---|---|"
             
             for (trip in recentTrips) {
-                // Fetch up to 10,000 points per trip to ensure we get a good average
-                val points = db.obdLogDao().getTripDataPoints(trip.tripId, 10000).firstOrNull() ?: emptyList()
+                // Fetch up to 10,000 points per trip using the synchronous query
+                val points = db.obdLogDao().getTripDataPointsInstant(trip.tripId, 10000)
                 if (points.isNotEmpty()) {
                     val summary = aggregateData(points)
                     val durationMs = (trip.endTime?.time ?: endDate.time) - trip.startTime.time
@@ -54,6 +54,7 @@ class GeminiPromptBuilder(private val context: Context) {
             }
 
             if (tripRows.isEmpty()) {
+                Log.d("GeminiPromptBuilder", "Trips found, but zero data points queried. Returning null.")
                 return@withContext null
             }
 
