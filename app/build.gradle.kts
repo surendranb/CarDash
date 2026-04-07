@@ -12,8 +12,20 @@ android {
         applicationId = "com.fuseforge.cardash"
         minSdk = 26
         targetSdk = 35
-        versionCode = 15
-        versionName = "1.0.6"
+        // Auto-increment based on Git commit count so we never have to manually bump it again
+        val gitCommitCount = try {
+            val stdout = java.io.ByteArrayOutputStream()
+            exec {
+                commandLine("git", "rev-list", "--count", "HEAD")
+                standardOutput = stdout
+            }
+            stdout.toString().trim().toInt()
+        } catch (e: Exception) {
+            23 // Fallback if Git fails
+        }
+
+        versionCode = gitCommitCount
+        versionName = "2.1.5.$gitCommitCount" // E.g., 2.1.5.112
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
@@ -59,6 +71,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     lint {
@@ -101,6 +114,9 @@ dependencies {
     
     // Play Services Location
     implementation("com.google.android.gms:play-services-location:21.0.1")
+    
+    // Google Generative AI SDK (Gemma/Gemini)
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
     
     // OBD-Java-API for OBD2 communication
     implementation("com.github.eltonvs:kotlin-obd-api:1.3.0")
