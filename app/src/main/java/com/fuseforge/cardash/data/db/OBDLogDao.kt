@@ -107,8 +107,24 @@ interface OBDLogDao {
     @Query("SELECT AVG(speedObd) FROM trip_data_points WHERE speedObd > 0 AND timestamp > :sinceTime")
     fun getAverageSpeedSince(sinceTime: Date): Flow<Int?>
     
-    // Get fuel consumption rate (% per hour based on recent readings)
+    // Get fuel level readings since 
     @Query("SELECT fuelLevel, timestamp FROM trip_data_points WHERE timestamp > :sinceTime ORDER BY timestamp ASC")
     fun getFuelLevelReadingsSince(sinceTime: Date): Flow<List<FuelLevelReading>>
 
+    // === HEARTBEAT METHODS ===
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertHeartbeat(heartbeat: VehicleHeartbeat): Long
+
+    @Query("SELECT * FROM vehicle_heartbeats WHERE tripId = :tripId ORDER BY timestamp ASC")
+    fun getHeartbeatsForTrip(tripId: String): Flow<List<VehicleHeartbeat>>
+
+    @Query("SELECT * FROM vehicle_heartbeats WHERE timestamp BETWEEN :startTime AND :endTime ORDER BY timestamp ASC")
+    fun getHeartbeatsByTimeRange(startTime: Date, endTime: Date): Flow<List<VehicleHeartbeat>>
+
+    @Query("SELECT * FROM vehicle_heartbeats ORDER BY timestamp DESC LIMIT :limit")
+    fun getRecentHeartbeats(limit: Int = 100): Flow<List<VehicleHeartbeat>>
+
+    @Query("SELECT * FROM vehicle_heartbeats ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun getRecentHeartbeatsInstant(limit: Int = 100): List<VehicleHeartbeat>
 }

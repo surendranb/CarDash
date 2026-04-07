@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.fuseforge.cardash.data.db.AppDatabase
-import com.fuseforge.cardash.data.db.TripDataPoint
+import com.fuseforge.cardash.data.db.VehicleHeartbeat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -23,16 +23,14 @@ class GraphViewModel(private val context: Context) : ViewModel() {
     
     // Available parameters for graphing
     val availableParameters = listOf(
-        GraphParameter("RPM", "rpm") { it.rpm },
-        GraphParameter("Speed", "speed", "km/h") { it.speedObd },
-        GraphParameter("Engine Load", "engineLoad", "%") { it.engineLoad },
-        GraphParameter("Coolant Temp", "coolantTemp", "°C") { it.coolantTemp },
+        GraphParameter("RPM (Avg)", "rpm") { it.avgRpm },
+        GraphParameter("Speed (Avg)", "speed", "km/h") { it.avgSpeed },
+        GraphParameter("Engine Load", "engineLoad", "%") { it.avgEngineLoad },
+        GraphParameter("Max Coolant", "coolantTemp", "°C") { it.maxCoolantTemp },
         GraphParameter("Fuel Level", "fuelLevel", "%") { it.fuelLevel },
-        GraphParameter("Intake Temp", "intakeAirTemp", "°C") { it.intakeAirTemp },
-        GraphParameter("Throttle", "throttlePosition", "%") { it.throttlePosition },
-        GraphParameter("Fuel Press", "fuelPressure", "kPa") { it.fuelPressure },
-        GraphParameter("Baro Press", "baroPressure", "kPa") { it.baroPressure },
-        GraphParameter("Battery", "batteryVoltage", "V") { it.batteryVoltage?.toDouble() }
+        GraphParameter("Intake Temp", "intakeAirTemp", "°C") { it.avgIntakeAirTemp },
+        GraphParameter("Throttle", "throttlePosition", "%") { it.avgThrottlePosition },
+        GraphParameter("Battery (Avg)", "batteryVoltage", "V") { it.avgBatteryVoltage?.toDouble() }
     )
     
     // Selected parameters to display
@@ -53,7 +51,7 @@ class GraphViewModel(private val context: Context) : ViewModel() {
     val filteredReadings = combine(_startDate, _endDate) { start, end ->
         Pair(start, end)
     }.flatMapLatest { (start, end) ->
-        dao.getTripDataPointsByTimeRange(start, end)
+        dao.getHeartbeatsByTimeRange(start, end)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -115,7 +113,7 @@ data class GraphParameter(
     val displayName: String,
     val id: String,
     val unit: String = "",
-    val valueExtractor: (TripDataPoint) -> Number?
+    val valueExtractor: (VehicleHeartbeat) -> Number?
 )
 
 // Class to represent a single data point on the graph
