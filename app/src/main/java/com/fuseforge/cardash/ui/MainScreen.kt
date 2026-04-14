@@ -97,7 +97,6 @@ import android.location.LocationManager
 import android.content.Context
 import android.content.Intent
 import com.fuseforge.cardash.utils.GeminiPromptBuilder
-import com.fuseforge.cardash.utils.MockDataSeeder
 import androidx.compose.material3.CircularProgressIndicator
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTextApi::class, ExperimentalFoundationApi::class)
@@ -137,6 +136,7 @@ fun MainScreen(
     if (tabSettings.showGraphsTab) tabs.add("Trends")
     if (tabSettings.showDiagnosticsTab) tabs.add("Diagnostics")
     if (tabSettings.showHistoryTab) tabs.add("History")
+    if (com.fuseforge.cardash.data.PreferencesManager(context).isAiInsightsEnabled()) tabs.add("Assistant")
     
     // Ensure selected tab is valid after settings change
     if (selectedTab >= tabs.size) {
@@ -240,72 +240,8 @@ fun MainScreen(
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     
-                    // Gemini AI Analysis Button
-                    if (isGeneratingPrompt) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.secondary,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(24.dp))
-                                .combinedClickable(
-                                    onClick = {
-                                        scope.launch {
-                                            isGeneratingPrompt = true
-                                            snackbarHostState.showSnackbar("Gathering 7-day OBD intelligence...")
-                                            
-                                            val builder = GeminiPromptBuilder(context)
-                                            val prompt = builder.buildPromptForLastNDays(7)
-                                            
-                                            isGeneratingPrompt = false
-                                            
-                                            if (prompt != null) {
-                                                val sendIntent = Intent().apply {
-                                                    action = Intent.ACTION_SEND
-                                                    putExtra(Intent.EXTRA_TEXT, prompt)
-                                                    type = "text/plain"
-                                                }
-                                                val shareIntent = Intent.createChooser(sendIntent, "Analyze with Gemini")
-                                                context.startActivity(shareIntent)
-                                            } else {
-                                                // Fallback for basic flow testing when DB is empty
-                                                val sendIntent = Intent().apply {
-                                                    action = Intent.ACTION_SEND
-                                                    putExtra(Intent.EXTRA_TEXT, "Act as an expert mechanic. There is no recent OBD data to analyze yet, but I am testing the Gemini integration flow.")
-                                                    type = "text/plain"
-                                                }
-                                                val shareIntent = Intent.createChooser(sendIntent, "Analyze with Gemini")
-                                                context.startActivity(shareIntent)
-                                            }
-                                        }
-                                    },
-                                    onLongClick = {
-                                        scope.launch {
-                                            isGeneratingPrompt = true
-                                            snackbarHostState.showSnackbar("Injecting 7 days of Mock Data...")
-                                            val success = MockDataSeeder.seedRecentData(context)
-                                            if (success) {
-                                                snackbarHostState.showSnackbar("Mock data seeded successfully! Tap Sparkle again.")
-                                            } else {
-                                                snackbarHostState.showSnackbar("Failed to seed mock data.")
-                                            }
-                                            isGeneratingPrompt = false
-                                        }
-                                    }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            androidx.compose.foundation.Image(
-                                painter = painterResource(id = com.fuseforge.cardash.R.drawable.ic_gemini_sparkle),
-                                contentDescription = "Analyze with Gemini",
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                    }
+                    // The Gemini AI button has been removed and replaced with a dedicated UI Tab.
+                    Spacer(modifier = Modifier.size(48.dp))
                     
                     // OBD Connection button
                     IconButton(
@@ -398,6 +334,7 @@ fun MainScreen(
                     DiagnosticsScreen(viewModel = diagViewModel)
                 }
                 "History" -> HistoryScreen()
+                "Assistant" -> com.fuseforge.cardash.ui.ai.MechanicScreen()
                 else -> MetricGridScreen(removeEngineStatus = true) // Default fallback
             }
         }

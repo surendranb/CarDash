@@ -57,7 +57,6 @@ class CarDashApp : Application() {
             obdServiceWithDiagnostics = obdServiceDiagnostics,
             sensorCollector = sensorCollector,
             preferences = preferencesManager,
-            obdLogDao = database.obdLogDao(),
             externalScope = applicationScope
         )
     }

@@ -58,15 +58,21 @@ class BluetoothManager(private val context: Context) {
                     println("BluetoothManager: Insecure RFCOMM socket created")
                     return socket
                 } catch (e: Exception) {
-                    println("BluetoothManager: Both secure and insecure RFCOMM failed")
-                    throw e
+                    println("BluetoothManager: Both secure and insecure RFCOMM failed, trying direct channel 1 fallback")
+                    try {
+                        // Final fallback: Use reflection to call createRfcommSocket on channel 1
+                        val socket = device?.javaClass?.getMethod("createRfcommSocket", Int::class.javaPrimitiveType)
+                            ?.invoke(device, 1) as? BluetoothSocket
+                        println("BluetoothManager: Direct Channel 1 socket created")
+                        return socket
+                    } catch (e2: Exception) {
+                        println("BluetoothManager: All socket creation methods failed")
+                        throw e2
+                    }
                 }
             }
-        } catch (e: IOException) {
-            println("BluetoothManager: Socket creation failed: ${e.javaClass.simpleName} - ${e.message}")
-            null
         } catch (e: Exception) {
-            println("BluetoothManager: Unexpected error: ${e.javaClass.simpleName} - ${e.message}")
+            println("BluetoothManager: Unexpected error during socket creation: ${e.javaClass.simpleName} - ${e.message}")
             null
         }
     }

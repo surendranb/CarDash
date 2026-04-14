@@ -3,7 +3,6 @@ package com.fuseforge.cardash.services.obd
 import android.util.Log
 import com.fuseforge.cardash.data.db.TripDataPoint
 import com.fuseforge.cardash.data.db.OBDDataType
-import com.fuseforge.cardash.data.db.OBDLogDao
 import com.fuseforge.cardash.data.PreferencesManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -23,13 +22,15 @@ private const val TAG = "PollingEngine"
 /**
  * High-performance sequential polling engine for OBD-II data collection.
  * Optimized for ELM327 hardware to prevent command collisions and adapter lockups.
+ * 
+ * V2: Decoupled from database. Emits a high-frequency "Pulse" (dataFlow) that 
+ * tiers the collection frequency based on vehicle state.
  */
 class PollingEngine(
     private val obdService: OBDService,
     private val obdServiceWithDiagnostics: OBDServiceWithDiagnostics,
     private val sensorCollector: com.fuseforge.cardash.services.sensors.SensorCollector,
     private val preferences: PreferencesManager,
-    private val obdLogDao: OBDLogDao,
     private val externalScope: CoroutineScope
 ) {
     private var pollingJob: Job? = null
@@ -53,7 +54,6 @@ class PollingEngine(
     private var currentBatteryVoltage = 0.0f
     private var isEngineRunning = false
     private var cycleCount = 0
-    private var lastStorageTime = 0L
 
     fun start() {
         if (_isPolling.value) return
@@ -69,6 +69,11 @@ class PollingEngine(
                 }
 
                 try {
+                    if (obdService.connectionStatus.value != ConnectionStatus.CONNECTED) {
+                        delay(1000)
+                        continue
+                    }
+
                     val startTime = System.currentTimeMillis()
                     
                     // 1. Poll ALWAYS (Tier 1) - High frequency
@@ -76,8 +81,8 @@ class PollingEngine(
                     pollEngineLoad()
                     pollThrottlePosition()
                     
-                    // Simplified Engine Running Logic: Only use Engine Load
-                    isEngineRunning = currentEngineLoad > 0
+                    // V2 Engine Running Logic: Use RPM + Load
+                    isEngineRunning = currentRpm > 200 || currentEngineLoad > 0
 
                     if (isEngineRunning || cycleCount % 5 == 0) {
                         pollSpeed()
@@ -105,52 +110,44 @@ class PollingEngine(
                     val location = sensorCollector.lastLocation.value
                     val acceleration = sensorCollector.linearAcceleration.value
 
-                    // Emit latest combined data
-                    val dataPoint = TripDataPoint(
-                        timestamp = Date(),
-                        tripId = obdServiceWithDiagnostics.getSessionId(),
-                        
-                        // GPS
-                        latitude = location?.latitude,
-                        longitude = location?.longitude,
-                        speedGps = location?.speed?.let { (it * 3.6).toInt() }, // Convert m/s to km/h
-                        
-                        // OBD
-                        rpm = currentRpm,
-                        speedObd = currentSpeed,
-                        engineLoad = currentEngineLoad,
-                        coolantTemp = currentCoolantTemp,
-                        fuelLevel = currentFuelLevel,
-                        intakeAirTemp = currentIntakeAirTemp,
-                        throttlePosition = currentThrottlePosition,
-                        fuelPressure = currentFuelPressure,
-                        baroPressure = currentBaroPressure,
-                        batteryVoltage = currentBatteryVoltage,
-
-                        // IMU
-                        gForceX = acceleration.getOrNull(0),
-                        gForceY = acceleration.getOrNull(1),
-                        gForceZ = acceleration.getOrNull(2)
-                    )
-                    _dataFlow.emit(dataPoint)
-
-                    // Database Storage Logic
-                    val timeSinceLastStorage = System.currentTimeMillis() - lastStorageTime
-                    if (shouldWriteToDatabase(dataPoint, timeSinceLastStorage)) {
-                        obdLogDao.insertTripDataPoint(dataPoint)
-                        lastStorageTime = System.currentTimeMillis()
+                    // Only emit if we are actually connected to prevent junk data during drops
+                    if (obdService.connectionStatus.value == ConnectionStatus.CONNECTED) {
+                        val dataPoint = TripDataPoint(
+                            timestamp = Date(),
+                            tripId = obdServiceWithDiagnostics.getSessionId(),
+                            latitude = location?.latitude,
+                            longitude = location?.longitude,
+                            speedGps = location?.speed?.let { (it * 3.6).toInt() },
+                            rpm = currentRpm,
+                            speedObd = currentSpeed,
+                            engineLoad = currentEngineLoad,
+                            coolantTemp = currentCoolantTemp,
+                            fuelLevel = currentFuelLevel,
+                            intakeAirTemp = currentIntakeAirTemp,
+                            throttlePosition = currentThrottlePosition,
+                            fuelPressure = currentFuelPressure,
+                            baroPressure = currentBaroPressure,
+                            batteryVoltage = currentBatteryVoltage,
+                            gForceX = acceleration.getOrNull(0),
+                            gForceY = acceleration.getOrNull(1),
+                            gForceZ = acceleration.getOrNull(2)
+                        )
+                        _dataFlow.emit(dataPoint)
                     }
 
                     cycleCount++
                     
-                    // Maintain stable cycle time
                     val elapsedTime = System.currentTimeMillis() - startTime
                     val delayTime = (preferences.getDataCollectionFrequency() - elapsedTime).coerceAtLeast(50L)
                     delay(delayTime)
 
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error in polling cycle: ${e.message}")
-                    delay(1000)
+                    if (e.message?.contains("Broken pipe") == true) {
+                        Log.e(TAG, "Hardware pipe broken. Entering standoff.")
+                    } else {
+                        Log.e(TAG, "Error in polling cycle: ${e.message}")
+                    }
+                    delay(2000)
                 }
             }
         }
@@ -164,27 +161,12 @@ class PollingEngine(
         Log.d(TAG, "Polling engine stopped")
     }
 
-    private fun shouldWriteToDatabase(point: TripDataPoint, elapsed: Long): Boolean {
-        // Force write every X seconds (from preferences)
-        if (elapsed >= preferences.getStorageFrequency()) return true
-        
-        // Dynamic write on significant change (only if engine running)
-        if (isEngineRunning) {
-            // Simplified threshold checks
-            if (point.rpm != null && Math.abs(point.rpm!! - currentRpm) > 200) return true
-            if (point.speedObd != null && Math.abs(point.speedObd!! - currentSpeed) > 5) return true
-        }
-        
-        return false
-    }
-
     private suspend fun pollRPM() {
         try {
             val response = obdService.sendCommand("01 0C")
             currentRpm = obdService.parseRPMResponse(response)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to poll RPM: ${e.message}")
-            currentRpm = 0 // Reset on failure (likely engine off/no data)
         }
     }
 
@@ -203,7 +185,6 @@ class PollingEngine(
             currentEngineLoad = obdService.parseEngineLoadResponse(response)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to poll Engine Load: ${e.message}")
-            currentEngineLoad = 0 // Reset on failure (likely engine off/no data)
         }
     }
 

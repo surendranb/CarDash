@@ -18,6 +18,10 @@ private const val PREFS_NAME = "CarDashPrefs"
 // Add keys for your preferences here
 private const val KEY_LAST_CONNECTED_DEVICE_ADDRESS = "last_connected_device_address"
 private const val KEY_VEHICLE_PROFILE = "vehicle_profile"
+private const val KEY_GEMINI_API_KEY = "gemini_api_key"
+private const val KEY_GEMINI_MODEL_NAME = "gemini_model_name"
+private const val KEY_AI_INSIGHTS_ENABLED = "ai_insights_enabled"
+private const val KEY_ODOMETER_OFFSET = "odometer_offset"
 
 class PreferencesManager(private val context: Context) {
     
@@ -115,6 +119,39 @@ class PreferencesManager(private val context: Context) {
 
     fun setVehicleProfile(profile: String) {
         preferences.edit().putString(KEY_VEHICLE_PROFILE, profile).apply()
+    }
+
+    fun isAiInsightsEnabled(): Boolean {
+        // Defaults to true, user can turn it off
+        return preferences.getBoolean(KEY_AI_INSIGHTS_ENABLED, true)
+    }
+
+    fun setAiInsightsEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_AI_INSIGHTS_ENABLED, enabled).apply()
+    }
+
+    fun getGeminiApiKey(): String {
+        return preferences.getString(KEY_GEMINI_API_KEY, "") ?: ""
+    }
+
+    fun setGeminiApiKey(key: String) {
+        preferences.edit().putString(KEY_GEMINI_API_KEY, key).apply()
+    }
+
+    fun getGeminiModelName(): String {
+        return preferences.getString(KEY_GEMINI_MODEL_NAME, "gemini-1.5-pro-latest") ?: "gemini-1.5-pro-latest"
+    }
+
+    fun setGeminiModelName(model: String) {
+        preferences.edit().putString(KEY_GEMINI_MODEL_NAME, model).apply()
+    }
+
+    fun getOdometerOffset(): Int {
+        return preferences.getInt(KEY_ODOMETER_OFFSET, 0)
+    }
+
+    fun setOdometerOffset(km: Int) {
+        preferences.edit().putInt(KEY_ODOMETER_OFFSET, km).apply()
     }
 
     // Add other preference methods below as needed

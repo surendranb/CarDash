@@ -23,9 +23,13 @@ import com.fuseforge.cardash.CarDashApp // Import CarDashApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.withContext
+import android.os.PowerManager
+import com.fuseforge.cardash.utils.HeartbeatAggregator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 
 class CarDashDataCollectorService : Service() {
 
@@ -33,15 +37,16 @@ class CarDashDataCollectorService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
 
     private lateinit var bluetoothManager: BluetoothManager
-    // lateinit var obdService: OBDService // Commented out: Made public for now for easier access from UI
-    private lateinit var obdService: OBDService // Use the singleton from CarDashApp
-                                        // Consider a cleaner approach (Binder, Broadcast, public Flows) later
+    private lateinit var obdService: OBDService
 
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected
 
     private var bluetoothReceiver: BluetoothReceiver? = null
     private var lastAttemptedAddress: String? = null
+    
+    private var wakeLock: PowerManager.WakeLock? = null
+    private var heartbeatAggregator: HeartbeatAggregator? = null
 
     // Notification
     private val NOTIFICATION_CHANNEL_ID = "CarDashOBDServiceChannel"
@@ -53,28 +58,84 @@ class CarDashDataCollectorService : Service() {
         const val EXTRA_DEVICE_ADDRESS = "EXTRA_DEVICE_ADDRESS"
     }
 
+    private var collectorJob: Job? = null
+    private var currentSessionId: String? = null
+    private var isEngineOn = false
+
     override fun onCreate() {
         super.onCreate()
         bluetoothManager = BluetoothManager(applicationContext)
-        // obdService = OBDService(bluetoothManager, CoroutineScope(Dispatchers.IO + serviceJob)) // Pass serviceJob for cancellation
         val app = applicationContext as CarDashApp
-        obdService = app.obdService // Use the singleton instance
+        obdService = app.obdService
         
         setupBluetoothReceiver()
-        
         createNotificationChannel()
-        println("CarDashDataCollectorService: onCreate - using shared OBDService instance")
+        
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "CarDash::OBDDataCollectionWakeLock")
+        
+        // --- V2: PERSISTENT COLLECTOR track start ---
+        // We start the collector once in onCreate. It survives Bluetooth drops.
+        startGlobalCollector()
+        
+        println("CarDashDataCollectorService: onCreate - persistent trace started")
+    }
+
+    private fun startGlobalCollector() {
+        val app = applicationContext as CarDashApp
+        collectorJob?.cancel()
+        collectorJob = serviceScope.launch {
+            app.pollingEngine.dataFlow.collect { point ->
+                // 1. Evaluate Engine State 
+                val rpm = point.rpm ?: 0
+                val load = point.engineLoad ?: 0
+                val runningNow = rpm > 200 || load > 0
+                
+                // Initialize the session immediately on the first data point.
+                // Do not wait for > 200 RPM, which causes critical data drops on slow starts.
+                if (heartbeatAggregator == null) {
+                    Log.d("CarDashService", "Genesis Data Point Received. Instantiating Master Ledger.")
+                    app.obdServiceDiagnostics.startLoggingSession()
+                    currentSessionId = app.obdServiceDiagnostics.getSessionId()
+                    heartbeatAggregator = HeartbeatAggregator(currentSessionId!!)
+                }
+
+                if (runningNow) {
+                    isEngineOn = true
+                }
+
+                // 2. Update Notification
+                val text = "RPM: ${point.rpm ?: 0} | Engine: ${if (isEngineOn) "ON" else "OFF"}"
+                val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                notificationManager.notify(NOTIFICATION_ID, createNotification(text))
+                
+                // 3. Feed the pulse (Only if we have a valid session)
+                heartbeatAggregator?.let { aggregator ->
+                    val heartbeat = aggregator.push(point)
+                    if (heartbeat != null) {
+                        Log.d("CarDashService", "Minute rollover [${currentSessionId}]: inserting heartbeat to DB")
+                        withContext(Dispatchers.IO) {
+                            try {
+                                app.database.obdLogDao().insertHeartbeat(heartbeat)
+                            } catch (e: Exception) {
+                                Log.e("CarDashService", "Critical Ledger Error: Failed to insert heartbeat. Coroutine survived.", e)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun setupBluetoothReceiver() {
         bluetoothReceiver = BluetoothReceiver(
             onBluetoothEnabled = {
-                println("CarDashDataCollectorService: Bluetooth turned back ON. Attempting auto-reconnect.")
+                Log.d("CarDashService", "Bluetooth turned back ON. Attempting reconnect.")
                 attemptAutoReconnect()
             },
             onDeviceDisconnected = { address ->
                 if (address == lastAttemptedAddress) {
-                    println("CarDashDataCollectorService: Monitored device disconnected. Triggering reconnect loop.")
+                    Log.d("CarDashService", "Monitored device disconnected. Triggering reconnect loop.")
                     _isConnected.value = false
                     attemptAutoReconnect()
                 }
@@ -90,30 +151,25 @@ class CarDashDataCollectorService : Service() {
     private fun attemptAutoReconnect() {
         val address = lastAttemptedAddress ?: (applicationContext as CarDashApp).preferencesManager.getLastConnectedDeviceAddress()
         if (address != null && !isConnected.value) {
-            println("CarDashDataCollectorService: Starting auto-reconnect task for $address")
             startConnectionTask(address)
         }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        println("CarDashDataCollectorService: onStartCommand - Action: ${intent?.action}")
+        Log.d("CarDashService", "onStartCommand - Action: ${intent?.action}")
+        
+        startForeground(NOTIFICATION_ID, createNotification("Awaiting OBD-II link..."))
+
         when (intent?.action) {
             ACTION_START_SERVICE -> {
                 val deviceAddress = intent.getStringExtra(EXTRA_DEVICE_ADDRESS)
                 if (deviceAddress != null) {
                     lastAttemptedAddress = deviceAddress
                     startConnectionTask(deviceAddress)
-                } else {
-                     println("CarDashDataCollectorService: No device address provided, stopping service.")
-                    stopSelf()
-                }
+                } 
             }
             ACTION_STOP_SERVICE -> {
-                println("CarDashDataCollectorService: Stopping service via action.")
                 stopServiceInternal()
-            }
-            else -> {
-                println("CarDashDataCollectorService: Received unhandled action: ${intent?.action}")
             }
         }
         return START_STICKY
@@ -121,41 +177,42 @@ class CarDashDataCollectorService : Service() {
 
     private fun startConnectionTask(deviceAddress: String) {
         serviceScope.launch {
-            println("CarDashDataCollectorService: Attempting to connect to $deviceAddress")
+            Log.d("CarDashService", "Attempting connection to $deviceAddress")
             val connectionResult = obdService.connect(deviceAddress)
             if (connectionResult is OBDService.ConnectionResult.Success) {
                 _isConnected.value = true
-                
-                // Start Polling Engine
                 val app = applicationContext as CarDashApp
                 app.pollingEngine.start()
-                
                 startForeground(NOTIFICATION_ID, createNotification("Connected to OBD-II"))
-                println("CarDashDataCollectorService: Connection SUCCESS, polling engine started.")
                 
-                // Live notification updates
-                serviceScope.launch {
-                    app.pollingEngine.dataFlow
-                        .collect { point ->
-                            val text = "Speed: ${point.speedObd ?: 0} km/h | RPM: ${point.rpm ?: 0}"
-                            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                            notificationManager.notify(NOTIFICATION_ID, createNotification(text))
-                        }
-                }
-
-                // Save the successfully connected device address
+                // Acquire WakeLock
+                wakeLock?.acquire(10 * 60 * 60 * 1000L)
+                
+                // Save address
                 app.preferencesManager.saveLastConnectedDeviceAddress(deviceAddress)
             } else {
                 _isConnected.value = false
-                val errorMessage = (connectionResult as? OBDService.ConnectionResult.Error)?.message ?: "Unknown connection error"
-                println("CarDashDataCollectorService: Connection FAILED: $errorMessage")
-                // Don't stopSelf() here if we want to keep retrying via the receiver/timer
+                Log.e("CarDashService", "Connection failed")
             }
         }
     }
 
     private fun stopServiceInternal() {
+        Log.d("CarDashService", "stopServiceInternal called")
+        // Use a persistent scope if possible or runBlocking for the final flush
         serviceScope.launch {
+            if (wakeLock?.isHeld == true) {
+                wakeLock?.release()
+            }
+            
+            // Final heartbeat flush - use IO dispatcher explicitly
+            heartbeatAggregator?.flush()?.let { finalHeartbeat ->
+                Log.d("CarDashService", "Flushing final partial heartbeat to DB")
+                withContext(Dispatchers.IO) {
+                    (applicationContext as CarDashApp).database.obdLogDao().insertHeartbeat(finalHeartbeat)
+                }
+            }
+
             val app = applicationContext as CarDashApp
             app.pollingEngine.stop()
             obdService.disconnect()
@@ -163,15 +220,25 @@ class CarDashDataCollectorService : Service() {
             lastAttemptedAddress = null // Clear on manual stop
             stopForeground(true)
             stopSelf()
-            println("CarDashDataCollectorService: Service stopped and polling engine stopped.")
+            Log.d("CarDashService", "Service stopped and polling engine stopped.")
         }
     }
 
     override fun onDestroy() {
-        println("CarDashDataCollectorService: onDestroy")
+        Log.d("CarDashService", "onDestroy - cleanup starting")
         bluetoothReceiver?.let { unregisterReceiver(it) }
-        stopServiceInternal() // Ensure cleanup
-        serviceJob.cancel() // Cancel all coroutines started in serviceScope
+        
+        // Manual cleanup to ensure the final flush coroutine has a chance to start 
+        // before we cancel the supervisor job
+        stopServiceInternal()
+        
+        // Give it a tiny window for the I/O to initiate if not already finished
+        serviceScope.launch {
+            kotlinx.coroutines.delay(500)
+            serviceJob.cancel()
+            Log.d("CarDashService", "onDestroy - Coroutines cancelled")
+        }
+        
         super.onDestroy()
     }
 

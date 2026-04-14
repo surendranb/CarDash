@@ -41,6 +41,10 @@ fun SettingsDialog(
     val context = LocalContext.current
     val prefsManager = remember { PreferencesManager(context) }
     var vehicleProfile by remember { mutableStateOf(prefsManager.getVehicleProfile()) }
+    var aiInsightsEnabled by remember { mutableStateOf(prefsManager.isAiInsightsEnabled()) }
+    var geminiApiKey by remember { mutableStateOf(prefsManager.getGeminiApiKey()) }
+    var geminiModelName by remember { mutableStateOf(prefsManager.getGeminiModelName()) }
+    var odometerOffset by remember { mutableStateOf(if (prefsManager.getOdometerOffset() == 0) "" else prefsManager.getOdometerOffset().toString()) }
     
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
@@ -134,6 +138,93 @@ fun SettingsDialog(
                 
                 Text(
                     text = "Helps Gemini AI provide better insights for your specific car.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+                )
+
+                Divider()
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // AI Settings
+                Text(
+                    text = "Intelligence",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                TabSettingItem(
+                    tabName = "Gemini AI Insights (Sparkle)",
+                    checked = aiInsightsEnabled,
+                    enabled = true,
+                    onCheckedChange = { 
+                        aiInsightsEnabled = it
+                        prefsManager.setAiInsightsEnabled(it)
+                    }
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                OutlinedTextField(
+                    value = geminiApiKey,
+                    onValueChange = { 
+                        geminiApiKey = it
+                        prefsManager.setGeminiApiKey(it)
+                    },
+                    label = { Text("Google AI Studio Token") },
+                    placeholder = { Text("AIza...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                OutlinedTextField(
+                    value = geminiModelName,
+                    onValueChange = { 
+                        geminiModelName = it
+                        prefsManager.setGeminiModelName(it)
+                    },
+                    label = { Text("LLM Model Target") },
+                    placeholder = { Text("e.g. gemma-4-31b-it") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Divider()
+
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Manual Odometer Sync
+                Text(
+                    text = "Odometer Sync",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = odometerOffset,
+                    onValueChange = { 
+                        odometerOffset = it
+                        val parsed = it.toIntOrNull()
+                        if (parsed != null) {
+                            prefsManager.setOdometerOffset(parsed)
+                        } else if (it.isEmpty()) {
+                            prefsManager.setOdometerOffset(0)
+                        }
+                    },
+                    label = { Text("Manual Dashboard Odometer (km)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                
+                Text(
+                    text = "Allows CarDash to sync recorded distances accurately.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)

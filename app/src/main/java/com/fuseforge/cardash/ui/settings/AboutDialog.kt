@@ -82,7 +82,7 @@ fun AboutDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Text(
-                    text = "Version 1.0",
+                    text = "Version ${com.fuseforge.cardash.BuildConfig.VERSION_NAME} (Code ${com.fuseforge.cardash.BuildConfig.VERSION_CODE})",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center

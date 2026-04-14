@@ -292,12 +292,13 @@ class OBDService(
                     // Wait for and collect the response
                     var response = ""
                     val startTime = System.currentTimeMillis()
-                    val timeout = 2000L  // 2 second timeout
+                    val timeout = 2500L  // 2.5 second timeout
                     
                     // Read until prompt character or timeout
                     while (System.currentTimeMillis() - startTime < timeout) {
-                        if (inputStream?.available() ?: 0 > 0) {
-                            val buffer = ByteArray(1024)
+                        val available = inputStream?.available() ?: 0
+                        if (available > 0) {
+                            val buffer = ByteArray(available)
                             val bytes = inputStream?.read(buffer) ?: 0
                             if (bytes > 0) {
                                 response += String(buffer, 0, bytes)
@@ -306,9 +307,10 @@ class OBDService(
                                     break
                                 }
                             }
+                        } else {
+                            // Small delay to prevent CPU thrashing while waiting for data
+                            delay(20)
                         }
-                        // Small delay to prevent CPU thrashing
-                        delay(10)
                     }
                     
                     if (response.isEmpty()) {

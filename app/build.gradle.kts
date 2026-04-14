@@ -12,20 +12,8 @@ android {
         applicationId = "com.fuseforge.cardash"
         minSdk = 26
         targetSdk = 35
-        // Auto-increment based on Git commit count so we never have to manually bump it again
-        val gitCommitCount = try {
-            val stdout = java.io.ByteArrayOutputStream()
-            exec {
-                commandLine("git", "rev-list", "--count", "HEAD")
-                standardOutput = stdout
-            }
-            stdout.toString().trim().toInt()
-        } catch (e: Exception) {
-            23 // Fallback if Git fails
-        }
-
-        versionCode = gitCommitCount
-        versionName = "2.1.5.$gitCommitCount" // E.g., 2.1.5.112
+        versionCode = 24
+        versionName = "2.1.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
