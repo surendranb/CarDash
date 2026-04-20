@@ -37,9 +37,13 @@ class CarDashApp : Application() {
         OBDLogger(applicationContext)
     }
 
+    val sensorCollector: SensorCollector by lazy {
+        SensorCollector(applicationContext)
+    }
+
     // V3: The high-fidelity Telemetry Reactor
     val telemetrist: Telemetrist by lazy {
-        Telemetrist(bluetoothManager, applicationScope)
+        Telemetrist(bluetoothManager, sensorCollector, applicationScope)
     }
 
     val vehicleLedger: VehicleLedger by lazy {

@@ -6,6 +6,7 @@ import com.fuseforge.cardash.model.VehicleState
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import java.util.*
 
 /**
@@ -14,6 +15,7 @@ import java.util.*
  */
 class Telemetrist(
     private val bluetoothManager: BluetoothManager,
+    private val sensorCollector: com.fuseforge.cardash.services.sensors.SensorCollector,
     private val externalScope: CoroutineScope
 ) {
     private val TAG = "Telemetrist"
@@ -45,7 +47,34 @@ class Telemetrist(
 
     fun start(deviceAddress: String) {
         if (orchestratorJob != null) return
+        
+        sensorCollector.start()
+        
         orchestratorJob = externalScope.launch {
+            // Observe Location/IMU in parallel
+            launch {
+                sensorCollector.lastLocation.collect { loc ->
+                    loc?.let {
+                        _state.update { s -> s.copy(
+                            latitude = it.latitude,
+                            longitude = it.longitude,
+                            altitude = it.altitude,
+                            bearing = it.bearing
+                        )}
+                    }
+                }
+            }
+            
+            launch {
+                sensorCollector.linearAcceleration.collect { g ->
+                    _state.update { s -> s.copy(
+                        gForceX = g[0] / 9.81f,
+                        gForceY = g[1] / 9.81f,
+                        gForceZ = g[2] / 9.81f
+                    )}
+                }
+            }
+
             while (coroutineContext.isActive) {
                 try {
                     activeLink = establishLink(deviceAddress)
@@ -63,6 +92,7 @@ class Telemetrist(
     fun stop() {
         orchestratorJob?.cancel()
         orchestratorJob = null
+        sensorCollector.stop()
         activeLink?.close()
         activeLink = null
         updateStatus(TelemetryStatus.DISCONNECTED)

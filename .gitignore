@@ -45,3 +45,4 @@ swap_files.sh
 # Gradle
 .gradle/
 build/
+scratch/

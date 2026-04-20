@@ -25,6 +25,15 @@ data class VehicleState(
     val fuelPressure: Int = 0,
     val baroPressure: Int = 0,
 
+    // Location & Motion (Navigator)
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    val altitude: Double = 0.0,
+    val bearing: Float = 0f,
+    val gForceX: Float = 0f,
+    val gForceY: Float = 0f,
+    val gForceZ: Float = 0f,
+
     // Metadata
     val isEngineRunning: Boolean = false,
     val cycleCount: Long = 0
