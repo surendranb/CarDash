@@ -5,8 +5,6 @@ import androidx.lifecycle.viewModelScope
 import android.bluetooth.BluetoothDevice
 import android.content.Context
 import com.fuseforge.cardash.data.preferences.AppPreferences
-import com.fuseforge.cardash.services.obd.OBDService
-import com.fuseforge.cardash.services.obd.OBDServiceWithDiagnostics
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -16,19 +14,10 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Date
 import com.fuseforge.cardash.data.db.AppDatabase
 
-import com.fuseforge.cardash.services.obd.PollingEngine
-
-class MetricViewModel(
-    private val obdService: OBDService,
-    private val obdServiceWithDiagnostics: OBDServiceWithDiagnostics,
-    private val pollingEngine: PollingEngine
-) : ViewModel() {
-
-    // Get application context from the OBD service
-    private val context = obdServiceWithDiagnostics.getContext()
-    
-    // Initialize preferences
-    private val preferences = (context.applicationContext as com.fuseforge.cardash.CarDashApp).preferencesManager
+class MetricViewModel(context: Context) : ViewModel() {
+    private val app = context.applicationContext as com.fuseforge.cardash.CarDashApp
+    private val telemetrist = app.telemetrist
+    private val preferences = app.preferencesManager
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState = _connectionState.asStateFlow()
@@ -100,38 +89,28 @@ class MetricViewModel(
 
     init {
         // Observe connection status from OBDService
-        obdService.connectionStatus
-            .onEach { status ->
-                _connectionState.value = when(status) {
-                    com.fuseforge.cardash.services.obd.ConnectionStatus.CONNECTED -> ConnectionState.Connected
-                    com.fuseforge.cardash.services.obd.ConnectionStatus.CONNECTING -> ConnectionState.Connecting
-                    com.fuseforge.cardash.services.obd.ConnectionStatus.RECONNECTING -> ConnectionState.Connecting
-                    com.fuseforge.cardash.services.obd.ConnectionStatus.ERROR -> ConnectionState.Failed("Connection failed")
-                    com.fuseforge.cardash.services.obd.ConnectionStatus.DISCONNECTED -> ConnectionState.Disconnected
+        // Observe the high-fidelity Telemetry Reactor (1.0s refresh)
+        telemetrist.state
+            .onEach { state ->
+                // Map reactor status to UI connection state
+                _connectionState.value = when(state.connectionStatus) {
+                    com.fuseforge.cardash.model.TelemetryStatus.ACTIVE -> ConnectionState.Connected
+                    com.fuseforge.cardash.model.TelemetryStatus.CONNECTING, 
+                    com.fuseforge.cardash.model.TelemetryStatus.HANDSHAKING -> ConnectionState.Connecting
+                    com.fuseforge.cardash.model.TelemetryStatus.ERROR -> ConnectionState.Failed("Connection error")
+                    else -> ConnectionState.Disconnected
                 }
-            }
-            .launchIn(viewModelScope)
-
-        // Observe data from PollingEngine
-        pollingEngine.dataFlow
-            .onEach { point ->
-                _rpm.value = point.rpm ?: 0
-                _speed.value = point.speedObd ?: 0
-                _engineLoad.value = point.engineLoad ?: 0
-                _coolantTemp.value = point.coolantTemp ?: 0
-                _fuelLevel.value = point.fuelLevel ?: 0
-                _intakeAirTemp.value = point.intakeAirTemp ?: 0
-                _throttlePosition.value = point.throttlePosition ?: 0
-                _fuelPressure.value = point.fuelPressure ?: 0
-                _baroPressure.value = point.baroPressure ?: 0
-                _batteryVoltage.value = point.batteryVoltage ?: 0f
-                _speedGps.value = point.speedGps ?: 0
-                _latitude.value = point.latitude
-                _longitude.value = point.longitude
-                _gForceX.value = point.gForceX ?: 0f
-                _gForceY.value = point.gForceY ?: 0f
-                _gForceZ.value = point.gForceZ ?: 0f
-                _engineRunning.value = (point.engineLoad ?: 0) > 0
+                
+                _rpm.value = state.rpm
+                _speed.value = state.speedKph
+                _engineLoad.value = state.engineLoad
+                _coolantTemp.value = state.coolantTemp
+                _fuelLevel.value = state.fuelLevel
+                _intakeAirTemp.value = state.intakeAirTemp
+                _throttlePosition.value = state.throttlePos
+                _baroPressure.value = state.baroPressure
+                _batteryVoltage.value = state.batteryVoltage
+                _engineRunning.value = state.isEngineRunning
             }
             .launchIn(viewModelScope)
     }
@@ -139,20 +118,17 @@ class MetricViewModel(
     /**
      * Connect to OBD device and start data collection
      */
-    fun connectToDevice(deviceAddress: String) {
+    fun connectToDevice(address: String) {
         viewModelScope.launch {
-            _connectionState.value = ConnectionState.Connecting
-            _errorMessage.emit("Connecting to $deviceAddress...")
-            
-            // Connection is handled by CaseDashDataCollectorService on real device, 
-            // but for UI flow we still call obdService.connect or trigger the service.
-            // Here we keep it simple by calling obdService.connect which PollingEngine observes.
-            val result = obdService.connect(deviceAddress)
-            if (result is OBDService.ConnectionResult.Success) {
-                // Polling engine is started by the Service, but we can also start it here if needed
-                pollingEngine.start()
-            } else if (result is OBDService.ConnectionResult.Error) {
-                _errorMessage.emit("Connection error: ${result.message}")
+            // Re-use the service intent logic to start the reactor in the background
+            val intent = android.content.Intent(app, com.fuseforge.cardash.services.CarDashDataCollectorService::class.java).apply {
+                action = com.fuseforge.cardash.services.CarDashDataCollectorService.ACTION_START_SERVICE
+                putExtra(com.fuseforge.cardash.services.CarDashDataCollectorService.EXTRA_DEVICE_ADDRESS, address)
+            }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                app.startForegroundService(intent)
+            } else {
+                app.startService(intent)
             }
         }
     }
@@ -162,8 +138,7 @@ class MetricViewModel(
      */
     fun disconnect() {
         viewModelScope.launch {
-            pollingEngine.stop()
-            obdService.disconnect()
+            app.telemetrist.stop()
             
             // Reset all state values
             _engineRunning.value = false
@@ -186,40 +161,7 @@ class MetricViewModel(
      */
     suspend fun getPairedDevices(): Set<BluetoothDevice> {
         return withContext(Dispatchers.IO) {
-            obdService.bluetoothManager.getPairedDevices()
-        }
-    }
-
-    /**
-     * Check permissions (not implemented in OBDService)
-     */
-    fun checkPermissions(): String? {
-        return null // OBDService doesn't have checkPermissions()
-    }
-
-    /**
-     * Toggle verbose logging setting
-     */
-    fun toggleVerboseLogging(enabled: Boolean) {
-        preferences.setVerboseLoggingEnabled(enabled)
-        _verboseLoggingEnabled.value = enabled
-    }
-    
-    /**
-     * Set data collection frequency
-     */
-    fun setDataCollectionFrequency(frequencyMs: Int) {
-        if (frequencyMs in 100..10000) { // Reasonable range check
-            preferences.updateDataCollectionFrequency(frequencyMs)
-        }
-    }
-    
-    /**
-     * Set storage frequency
-     */
-    fun setStorageFrequency(frequencyMs: Int) {
-        if (frequencyMs in 1000..60000) { // Reasonable range check
-            preferences.updateStorageFrequency(frequencyMs)
+            app.bluetoothManager.getPairedDevices()
         }
     }
 
@@ -228,5 +170,15 @@ class MetricViewModel(
         object Connecting : ConnectionState()
         object Connected : ConnectionState()
         class Failed(val message: String) : ConnectionState()
+    }
+}
+
+class MetricViewModelFactory(private val context: android.content.Context) : androidx.lifecycle.ViewModelProvider.Factory {
+    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(MetricViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return MetricViewModel(context) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

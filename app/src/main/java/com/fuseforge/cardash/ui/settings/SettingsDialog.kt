@@ -234,6 +234,10 @@ fun SettingsDialog(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
+                /* 
+                // Reactor Engine: Cycles are now deterministic (2.5s) for AA Safety.
+                // Adjustable frequency is disabled to prevent Quota violations.
+                
                 // Data Collection Settings
                 Text(
                     text = "Data Collection",
@@ -292,6 +296,7 @@ fun SettingsDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Divider()
+                */
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 

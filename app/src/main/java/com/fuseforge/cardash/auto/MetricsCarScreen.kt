@@ -18,9 +18,8 @@ import androidx.lifecycle.lifecycleScope
 import com.fuseforge.cardash.CarDashApp
 import com.fuseforge.cardash.data.PreferencesManager
 import com.fuseforge.cardash.services.CarDashDataCollectorService
-import com.fuseforge.cardash.services.obd.ConnectionStatus
-import com.fuseforge.cardash.services.obd.OBDService
-import com.fuseforge.cardash.services.obd.PollingEngine
+import com.fuseforge.cardash.services.obd.Telemetrist
+import com.fuseforge.cardash.model.TelemetryStatus
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -28,12 +27,12 @@ import java.util.Locale
 
 class MetricsCarScreen(carContext: CarContext) : Screen(carContext) {
 
-    private var obdService: OBDService? = null
-    private var pollingEngine: PollingEngine? = null
+    private var telemetrist: Telemetrist? = null
     private var preferencesManager: PreferencesManager? = null
     private var metricsUpdateJob: Job? = null
     private var lastInvalidateTime = 0L
-    private val REFRESH_THROTTLE_MS = 4000L
+    private val REFRESH_THROTTLE_MS = 2500L // Safety Guardrail for AA Quota
+    private var lastKnownConnectionStatus: TelemetryStatus? = null
 
     // 6 Diagnostic-Centric Metrics (Harden to non-OEM essentials)
     private var baroPressureText = "--"
@@ -53,18 +52,16 @@ class MetricsCarScreen(carContext: CarContext) : Screen(carContext) {
 
     init {
         val app = carContext.applicationContext as CarDashApp
-        obdService = app.obdService
-        pollingEngine = app.pollingEngine
+        telemetrist = app.telemetrist
         preferencesManager = app.preferencesManager
 
         lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) {
                 super.onStart(owner)
 
-                obdService?.let { service ->
+                telemetrist?.let { reactor ->
                     val lastDeviceAddress = preferencesManager?.getLastConnectedDeviceAddress()
-                    if (service.connectionStatus.value != ConnectionStatus.CONNECTED && 
-                        service.connectionStatus.value != ConnectionStatus.CONNECTING && 
+                    if (reactor.state.value.connectionStatus == TelemetryStatus.DISCONNECTED && 
                         !lastDeviceAddress.isNullOrBlank()) {
                         val intent = Intent(carContext, CarDashDataCollectorService::class.java).apply {
                             action = CarDashDataCollectorService.ACTION_START_SERVICE
@@ -81,16 +78,16 @@ class MetricsCarScreen(carContext: CarContext) : Screen(carContext) {
                         }
                     }
 
-                    // Feed off the modern unified dataFlow
-                    metricsUpdateJob = pollingEngine?.dataFlow?.onEach { point ->
-                        val isConnected = service.connectionStatus.value == ConnectionStatus.CONNECTED
+                    // V3: Observe the Telemetrist Reactor
+                    metricsUpdateJob = reactor.state.onEach { state ->
+                        val isConnected = state.connectionStatus == TelemetryStatus.ACTIVE
                         
                         // 1. Barometric Pressure
-                        val baroVal = point.baroPressure ?: 0
+                        val baroVal = state.baroPressure
                         val newBaroText = if (isConnected) "${baroVal}kPa" else "--"
 
                         // 2. Engine Load
-                        val loadVal = point.engineLoad?.toFloat() ?: 0f
+                        val loadVal = state.engineLoad.toFloat()
                         val newLoadText = if (isConnected) String.format(Locale.US, "%.0f%%", loadVal) else "--"
                         val newLoadColor = when {
                             loadVal >= 85f -> CarColor.RED
@@ -100,7 +97,7 @@ class MetricsCarScreen(carContext: CarContext) : Screen(carContext) {
                         }
 
                         // 3. Coolant Temp
-                        val coolantVal = point.coolantTemp ?: 0
+                        val coolantVal = state.coolantTemp
                         val newCoolantText = if (isConnected) "$coolantVal°C" else "--"
                         val newCoolantColor = when {
                             coolantVal >= 105 -> CarColor.RED
@@ -110,7 +107,7 @@ class MetricsCarScreen(carContext: CarContext) : Screen(carContext) {
                         }
 
                         // 4. Battery Voltage
-                        val voltVal = point.batteryVoltage ?: 0f
+                        val voltVal = state.batteryVoltage
                         val newVoltageText = if (isConnected) String.format(Locale.US, "%.1fV", voltVal) else "--"
                         val newVoltageColor = when {
                             voltVal < 11.8f && voltVal > 0f -> CarColor.RED
@@ -121,22 +118,26 @@ class MetricsCarScreen(carContext: CarContext) : Screen(carContext) {
                         }
 
                         // 5. Throttle Position
-                        val throttleVal = point.throttlePosition ?: 0
+                        val throttleVal = state.throttlePos
                         val newThrottleText = if (isConnected) "$throttleVal%" else "--"
 
                         // 6. Intake Air Temp
-                        val iatVal = point.intakeAirTemp ?: 0
+                        val iatVal = state.intakeAirTemp
                         val newIatText = if (isConnected) "$iatVal°C" else "--"
 
-                        // Throttle invalidation to 4000ms for safety limit compliance
+                        // Cycle management
                         val currentTime = System.currentTimeMillis()
-                        if (currentTime - lastInvalidateTime >= 4000L) {
+                        val connectionStatus = state.connectionStatus
 
-                            // Assess change AGAINST currently painted state, not silent stream state
+                        if (currentTime - lastInvalidateTime >= REFRESH_THROTTLE_MS) {
+                            val connectionChanged = connectionStatus != lastKnownConnectionStatus
+
+                            // Assess change AGAINST currently painted state
                             val hasChanged = newBaroText != baroPressureText || newLoadText != engineLoadText || 
                                            newCoolantText != coolantTempText || newVoltageText != voltageText ||
                                            newThrottleText != throttlePosText || newIatText != intakeAirTempText ||
-                                           newLoadColor != loadColor || newCoolantColor != coolantColor
+                                           newLoadColor != loadColor || newCoolantColor != coolantColor ||
+                                           newVoltageColor != voltageColor || connectionChanged
 
                             if (hasChanged) {
                                 baroPressureText = newBaroText
@@ -149,6 +150,7 @@ class MetricsCarScreen(carContext: CarContext) : Screen(carContext) {
                                 loadColor = newLoadColor
                                 coolantColor = newCoolantColor
                                 voltageColor = newVoltageColor
+                                lastKnownConnectionStatus = connectionStatus
 
                                 lastInvalidateTime = currentTime
                                 invalidate() 
@@ -168,9 +170,9 @@ class MetricsCarScreen(carContext: CarContext) : Screen(carContext) {
 
     override fun onGetTemplate(): Template {
         val itemListBuilder = ItemList.Builder()
-        val isConnecting = obdService?.connectionStatus?.value == ConnectionStatus.CONNECTING
-        val isDisconnected = obdService?.connectionStatus?.value == ConnectionStatus.DISCONNECTED ||
-                obdService?.connectionStatus?.value == ConnectionStatus.ERROR
+        val status = telemetrist?.state?.value?.connectionStatus
+        val isConnecting = status == TelemetryStatus.CONNECTING || status == TelemetryStatus.HANDSHAKING
+        val isDisconnected = status == TelemetryStatus.DISCONNECTED || status == TelemetryStatus.ERROR
 
         // Minimalist Grid Items - No space-wasting logos, just Number + Label
         addMetricItem(itemListBuilder, engineLoadText, "ENG LOAD", loadColor, isConnecting)

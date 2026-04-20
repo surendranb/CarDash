@@ -10,7 +10,10 @@ import java.io.IOException
 import java.util.UUID
 
 class BluetoothManager(private val context: Context) {
-    private val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
+    private val bluetoothAdapter: BluetoothAdapter? by lazy {
+        val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager
+        manager?.adapter
+    }
     private val sppUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB") // Standard SPP UUID
 
     fun isBluetoothSupported(): Boolean {
@@ -22,11 +25,34 @@ class BluetoothManager(private val context: Context) {
         return bluetoothAdapter?.isEnabled ?: false
     }
 
+    private fun hasConnectPermission(): Boolean {
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+
     @SuppressLint("MissingPermission")
     fun getPairedDevices(): Set<BluetoothDevice> {
-        return if (isBluetoothEnabled()) {
-            bluetoothAdapter?.bondedDevices ?: emptySet()
-        } else {
+        println("BluetoothManager: getPairedDevices() called")
+        
+        if (!isBluetoothEnabled()) {
+            println("BluetoothManager: Aborting - Bluetooth is disabled")
+            return emptySet()
+        }
+
+        if (!hasConnectPermission()) {
+            println("BluetoothManager: Aborting - BLUETOOTH_CONNECT permission missing")
+            return emptySet()
+        }
+
+        return try {
+            val bonded = bluetoothAdapter?.bondedDevices ?: emptySet()
+            println("BluetoothManager: Discovery success - found ${bonded.size} paired devices")
+            bonded
+        } catch (e: Exception) {
+            println("BluetoothManager: Discovery failed - ${e.message}")
             emptySet()
         }
     }

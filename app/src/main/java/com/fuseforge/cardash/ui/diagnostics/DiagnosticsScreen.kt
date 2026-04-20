@@ -11,7 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fuseforge.cardash.data.db.DiagnosticCode
-import com.fuseforge.cardash.services.obd.ConnectionStatus
+import com.fuseforge.cardash.model.TelemetryStatus
 
 @Composable
 fun DiagnosticsScreen(
@@ -35,7 +35,7 @@ fun DiagnosticsScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (connectionStatus != ConnectionStatus.CONNECTED) {
+        if (connectionStatus != TelemetryStatus.ACTIVE) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center

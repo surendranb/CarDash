@@ -4,10 +4,10 @@ import android.app.Application
 import com.fuseforge.cardash.data.PreferencesManager
 import com.fuseforge.cardash.data.db.AppDatabase
 import com.fuseforge.cardash.data.db.DTCDataSeeder
+import com.fuseforge.cardash.model.TelemetryStatus
 import com.fuseforge.cardash.services.obd.BluetoothManager
-import com.fuseforge.cardash.services.obd.OBDService
-import com.fuseforge.cardash.services.obd.OBDServiceWithDiagnostics
-import com.fuseforge.cardash.services.obd.PollingEngine
+import com.fuseforge.cardash.services.obd.Telemetrist
+import com.fuseforge.cardash.services.obd.VehicleLedger
 import com.fuseforge.cardash.services.sensors.SensorCollector
 import com.fuseforge.cardash.utils.OBDLogger
 import kotlinx.coroutines.CoroutineScope
@@ -37,45 +37,24 @@ class CarDashApp : Application() {
         OBDLogger(applicationContext)
     }
 
-    // Base OBD service with sequential command queue
-    val obdService: OBDService by lazy {
-        OBDService(bluetoothManager, applicationScope)
-    }
-    
-    // OBD service with diagnostics wrapping the base service
-    val obdServiceDiagnostics: OBDServiceWithDiagnostics by lazy {
-        OBDServiceWithDiagnostics(obdService, applicationContext)
+    // V3: The high-fidelity Telemetry Reactor
+    val telemetrist: Telemetrist by lazy {
+        Telemetrist(bluetoothManager, applicationScope)
     }
 
-    val sensorCollector: SensorCollector by lazy {
-        SensorCollector(applicationContext)
-    }
-
-    val pollingEngine: PollingEngine by lazy {
-        PollingEngine(
-            obdService = obdService,
-            obdServiceWithDiagnostics = obdServiceDiagnostics,
-            sensorCollector = sensorCollector,
-            preferences = preferencesManager,
-            externalScope = applicationScope
-        )
+    val vehicleLedger: VehicleLedger by lazy {
+        VehicleLedger(database, telemetrist, applicationScope)
     }
     
     override fun onCreate() {
         super.onCreate()
-        
-        // Start a diagnostic session when the app starts
-        applicationScope.launch {
-            obdServiceDiagnostics.startLoggingSession()
-        }
     }
     
     override fun onTerminate() {
         super.onTerminate()
         
         // Ensure service cleanup on app termination
-        applicationScope.launch {
-            obdService.disconnect()
-        }
+        telemetrist.stop()
+        vehicleLedger.stop()
     }
 }

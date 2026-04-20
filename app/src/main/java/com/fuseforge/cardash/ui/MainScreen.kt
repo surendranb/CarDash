@@ -35,7 +35,6 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -105,7 +104,7 @@ fun MainScreen(
     onPermissionNeeded: () -> Unit = {}
 ) {
     val app = LocalContext.current.applicationContext as CarDashApp
-    val factory = MetricViewModelFactory(app.obdService, app.obdServiceDiagnostics, app.pollingEngine)
+    val factory = MetricViewModelFactory(LocalContext.current)
     val viewModel: MetricViewModel = viewModel(factory = factory)
     val bluetoothManager = app.bluetoothManager
     
@@ -225,7 +224,6 @@ fun MainScreen(
                         Icon(
                             imageVector = Icons.Filled.Settings,
                             contentDescription = "Settings",
-                            modifier = Modifier.clickable { showSettingsDialog = true },
                             tint = if (connectionState is MetricViewModel.ConnectionState.Connected) Success else if (connectionState is MetricViewModel.ConnectionState.Connecting) Warning else ThemeError
                         )
                     }
@@ -246,10 +244,18 @@ fun MainScreen(
                     // OBD Connection button
                     IconButton(
                         onClick = { 
+                            val missingPermission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                                context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED
+                            } else {
+                                false
+                            }
+
                             if (!bluetoothManager.isBluetoothEnabled()) {
                                 scope.launch {
                                     snackbarHostState.showSnackbar("Please enable Bluetooth to connect to OBD-II")
                                 }
+                            } else if (missingPermission) {
+                                onPermissionNeeded()
                             } else {
                                 // Refresh devices list every time the dialog is about to be shown
                                 devices = bluetoothManager.getPairedDevices()
@@ -329,7 +335,7 @@ fun MainScreen(
                 "Metrics" -> MetricGridScreen(removeEngineStatus = true)
                 "Trends" -> GraphScreen()
                 "Diagnostics" -> {
-                    val diagFactory = DiagnosticsViewModelFactory(app.obdService, app.database.diagnosticDao())
+                    val diagFactory = DiagnosticsViewModelFactory(LocalContext.current, app.database.diagnosticDao())
                     val diagViewModel: DiagnosticsViewModel = viewModel(factory = diagFactory)
                     DiagnosticsScreen(viewModel = diagViewModel)
                 }

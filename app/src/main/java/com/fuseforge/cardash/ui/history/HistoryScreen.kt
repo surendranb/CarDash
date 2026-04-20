@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuseforge.cardash.data.db.VehicleHeartbeat
 import com.fuseforge.cardash.ui.theme.Success
@@ -31,8 +32,12 @@ fun HistoryScreen(
 ) {
     val heartbeats by viewModel.ledgerHeartbeats.collectAsState()
     val vitals by viewModel.vitals.collectAsState()
+    val isRecording by viewModel.isRecording.collectAsState()
     
     Column(modifier = Modifier.fillMaxSize()) {
+        
+        // Ledger Status Header (Phase 3 restoration)
+        LedgerStatusHeader(isRecording)
         
         // Vitals Badges Section (Task 3.3)
         vitals?.let { v ->
@@ -45,11 +50,21 @@ fun HistoryScreen(
                 modifier = Modifier.fillMaxSize().padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "No Heartbeats found. Connect to your vehicle to build the Digital Clone Ledger.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "The Digital Ledger is Empty.",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "History is recorded in 1-minute 'Heartbeats'. Connect to your vehicle to begin the ledger.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         } else {
             // Ledger Header
@@ -72,6 +87,33 @@ fun HistoryScreen(
                     Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun LedgerStatusHeader(isRecording: Boolean) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(if (isRecording) Success else Warning, RoundedCornerShape(4.dp))
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = if (isRecording) "DIGITAL LEDGER: RECORDING..." else "DIGITAL LEDGER: STANDBY (Disconnected)",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp,
+                color = if (isRecording) Success else MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
