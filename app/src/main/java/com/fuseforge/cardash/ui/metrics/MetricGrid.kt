@@ -489,10 +489,9 @@ fun PhoneMetricGrid(
                 modifier = Modifier.weight(1f)
             )
             
-            // For phone we might just show a simplified G-Force or just X/Y
             MetricCard(
                 title = "LATERAL G",
-                value = String.format("%.2f", gForceX / 9.81f),
+                value = String.format("%.2f", gForceX),
                 unit = "G",
                 status = MetricStatus.GOOD,
                 isConnected = isConnected,
@@ -705,14 +704,9 @@ fun GForceCard(
     isConnected: Boolean,
     modifier: Modifier = Modifier
 ) {
-    // Map m/s^2 to G (approx 9.81)
-    val gX = x / 9.81f
-    val gY = y / 9.81f
-    val gZ = z / 9.81f
-
     MetricCard(
         title = "G-FORCE (X, Y, Z)",
-        value = String.format("%.2f, %.2f, %.2f", gX, gY, gZ),
+        value = String.format("%.2f, %.2f, %.2f", x, y, z),
         unit = "G",
         status = MetricStatus.GOOD,
         isConnected = isConnected,

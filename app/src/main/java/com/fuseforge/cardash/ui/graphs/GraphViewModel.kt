@@ -35,7 +35,7 @@ class GraphViewModel(private val context: Context) : ViewModel() {
     
     // Selected parameters to display
     private val _selectedParameters = MutableStateFlow(
-        setOf(availableParameters[0], availableParameters[1]) // Default to RPM and Speed
+        setOf(availableParameters[0], availableParameters[1], availableParameters[2], availableParameters[3]) 
     )
     val selectedParameters: StateFlow<Set<GraphParameter>> = _selectedParameters
     

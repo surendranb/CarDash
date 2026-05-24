@@ -27,11 +27,7 @@ fun SettingsDialog(
     val verboseLoggingEnabled by metricViewModel.verboseLoggingEnabled.collectAsState()
     var verboseLoggingState by remember { mutableStateOf(verboseLoggingEnabled) }
     
-    // Data collection frequency slider value
-    var dataCollectionFrequency by remember { mutableStateOf(AppPreferences.DEFAULT_DATA_COLLECTION_FREQUENCY) } 
-    
-    // Storage frequency slider value
-    var storageFrequency by remember { mutableStateOf(AppPreferences.DEFAULT_STORAGE_FREQUENCY) }
+
     
     // Update local state when external state changes
     LaunchedEffect(verboseLoggingEnabled) {
@@ -44,7 +40,6 @@ fun SettingsDialog(
     var aiInsightsEnabled by remember { mutableStateOf(prefsManager.isAiInsightsEnabled()) }
     var geminiApiKey by remember { mutableStateOf(prefsManager.getGeminiApiKey()) }
     var geminiModelName by remember { mutableStateOf(prefsManager.getGeminiModelName()) }
-    var odometerOffset by remember { mutableStateOf(if (prefsManager.getOdometerOffset() == 0) "" else prefsManager.getOdometerOffset().toString()) }
     
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
@@ -193,44 +188,6 @@ fun SettingsDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Divider()
-
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Manual Odometer Sync
-                Text(
-                    text = "Odometer Sync",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = odometerOffset,
-                    onValueChange = { 
-                        odometerOffset = it
-                        val parsed = it.toIntOrNull()
-                        if (parsed != null) {
-                            prefsManager.setOdometerOffset(parsed)
-                        } else if (it.isEmpty()) {
-                            prefsManager.setOdometerOffset(0)
-                        }
-                    },
-                    label = { Text("Manual Dashboard Odometer (km)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                
-                Text(
-                    text = "Allows CarDash to sync recorded distances accurately.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
-                )
-
-                Divider()
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 

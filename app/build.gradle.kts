@@ -12,8 +12,8 @@ android {
         applicationId = "com.fuseforge.cardash"
         minSdk = 26
         targetSdk = 35
-        versionCode = 26
-        versionName = "2.1.9"
+        versionCode = 36
+        versionName = "2.3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         

@@ -43,7 +43,7 @@ class CarDashApp : Application() {
 
     // V3: The high-fidelity Telemetry Reactor
     val telemetrist: Telemetrist by lazy {
-        Telemetrist(bluetoothManager, sensorCollector, applicationScope)
+        Telemetrist(bluetoothManager, sensorCollector, preferencesManager, applicationScope)
     }
 
     val vehicleLedger: VehicleLedger by lazy {
@@ -52,6 +52,9 @@ class CarDashApp : Application() {
     
     override fun onCreate() {
         super.onCreate()
+        applicationScope.launch(Dispatchers.IO) {
+            DTCDataSeeder.seedIfEmpty(database.diagnosticDao())
+        }
     }
     
     override fun onTerminate() {

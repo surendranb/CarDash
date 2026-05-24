@@ -64,6 +64,9 @@ class BluetoothManager(private val context: Context) {
             return null
         }
         
+        // CRITICAL: Always cancel discovery before connecting to prevent stack deadlock
+        bluetoothAdapter?.cancelDiscovery()
+        
         return try {
             println("BluetoothManager: Creating socket for $deviceAddress")
             val device = bluetoothAdapter?.getRemoteDevice(deviceAddress)

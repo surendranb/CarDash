@@ -18,13 +18,37 @@ import kotlin.math.roundToInt
 fun LineChartCanvas(
     dataPoints: List<GraphDataPoint>,
     modifier: Modifier = Modifier,
-    lineColor: Color = Color.Blue
+    lineColor: Color = Color.Blue,
+    yMin: Double? = null,
+    yMax: Double? = null
 ) {
     if (dataPoints.isEmpty()) return
     
     // Get the min and max values
-    val minValue = dataPoints.minOf { it.value }
-    val maxValue = dataPoints.maxOf { it.value }
+    val dataMin = dataPoints.minOf { it.value }
+    val dataMax = dataPoints.maxOf { it.value }
+    
+    // Determine bounds (use provided, or calculate with padding)
+    var minValue = yMin ?: dataMin
+    var maxValue = yMax ?: dataMax
+    
+    // If auto-scaling and the line is perfectly flat, pad it so it draws in the middle
+    if (yMin == null && yMax == null) {
+        if (minValue == maxValue) {
+            if (minValue == 0.0) {
+                maxValue = 10.0
+            } else {
+                minValue -= Math.abs(minValue * 0.1)
+                maxValue += Math.abs(maxValue * 0.1)
+            }
+        } else {
+            // Add a small 5% visual margin so points don't touch the very top/bottom edges
+            val margin = (maxValue - minValue) * 0.05
+            minValue -= margin
+            maxValue += margin
+        }
+    }
+    
     val valueRange = (maxValue - minValue).coerceAtLeast(0.1) // Avoid division by zero
     
     // Get the min and max timestamps

@@ -61,7 +61,15 @@ class CarDashDataCollectorService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, createNotification("Awaiting OBD-II link..."))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                NOTIFICATION_ID,
+                createNotification("Awaiting OBD-II link..."),
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, createNotification("Awaiting OBD-II link..."))
+        }
 
         when (intent?.action) {
             ACTION_START_SERVICE -> {
@@ -82,7 +90,15 @@ class CarDashDataCollectorService : Service() {
         
         wakeLock?.acquire(10 * 60 * 60 * 1000L)
         app.preferencesManager.saveLastConnectedDeviceAddress(deviceAddress)
-        startForeground(NOTIFICATION_ID, createNotification("Connected to Telemetry Reactor"))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                NOTIFICATION_ID,
+                createNotification("Connected to Telemetry Reactor"),
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, createNotification("Connected to Telemetry Reactor"))
+        }
     }
 
     private fun stopServiceInternal() {

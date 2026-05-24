@@ -25,7 +25,8 @@ object DatabaseBackup {
             }
 
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            val backupDir = File(context.filesDir, "backups")
+            val baseDir = context.getExternalFilesDir(null) ?: context.filesDir
+            val backupDir = File(baseDir, "backups")
             if (!backupDir.exists()) {
                 backupDir.mkdirs()
             }

@@ -30,6 +30,7 @@ data class VehicleState(
     val longitude: Double = 0.0,
     val altitude: Double = 0.0,
     val bearing: Float = 0f,
+    val gpsSpeedMps: Float = 0f,
     val gForceX: Float = 0f,
     val gForceY: Float = 0f,
     val gForceZ: Float = 0f,

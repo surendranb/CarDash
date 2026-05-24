@@ -14,6 +14,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fuseforge.cardash.ai.CarDashAgent
+import com.fuseforge.cardash.data.PreferencesManager
+import com.fuseforge.cardash.utils.GeminiPromptBuilder
+import com.google.ai.client.generativeai.GenerativeModel
+import com.google.ai.client.generativeai.type.content
+import org.json.JSONArray
+import org.json.JSONObject
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -21,23 +27,103 @@ import kotlinx.coroutines.launch
 fun MechanicScreen() {
     val context = LocalContext.current
     val agent = remember { CarDashAgent(context) }
+    val promptBuilder = remember { GeminiPromptBuilder(context) }
+    val prefsManager = remember { PreferencesManager(context) }
     val scope = rememberCoroutineScope()
     
     var currentQuery by remember { mutableStateOf("") }
-    var chatHistory by remember { mutableStateOf(listOf<ChatMessage>()) }
+    var chatHistory by remember { 
+        mutableStateOf(try {
+            val jsonStr = prefsManager.getChatHistory()
+            if (jsonStr.isBlank()) emptyList()
+            else {
+                val array = JSONArray(jsonStr)
+                (0 until array.length()).map { i ->
+                    val obj = array.getJSONObject(i)
+                    ChatMessage(obj.getString("text"), obj.getBoolean("isUser"))
+                }
+            }
+        } catch (e: Exception) { emptyList<ChatMessage>() })
+    }
     var isThinking by remember { mutableStateOf(false) }
 
-    fun submitQuery(query: String) {
+    fun saveHistory(history: List<ChatMessage>) {
+        val array = JSONArray()
+        for (msg in history) {
+            val obj = JSONObject()
+            obj.put("text", msg.text)
+            obj.put("isUser", msg.isUser)
+            array.put(obj)
+        }
+        prefsManager.setChatHistory(array.toString())
+    }
+
+    /**
+     * Agentic path: free-form user queries → LLM classifies, writes SQL, narrates.
+     */
+    fun submitFreeformQuery(query: String) {
         if (query.isBlank() || isThinking) return
         
+        val contextList = chatHistory.toList()
+        
         chatHistory = chatHistory + ChatMessage(query, isUser = true)
+        saveHistory(chatHistory)
         currentQuery = ""
         isThinking = true
         
         scope.launch {
-            val response = agent.executeAgenticLoop(query)
+            val response = agent.executeAgenticLoop(query, contextList)
             chatHistory = chatHistory + ChatMessage(response, isUser = false)
+            saveHistory(chatHistory)
             isThinking = false
+        }
+    }
+
+    /**
+     * Deterministic path: preset actions → hardcoded data extraction → single LLM narration call.
+     * Numbers are always correct. One API call. Fast.
+     */
+    fun submitPresetAction(label: String, buildPrompt: suspend () -> String?) {
+        if (isThinking) return
+
+        chatHistory = chatHistory + ChatMessage(label, isUser = true)
+        saveHistory(chatHistory)
+        isThinking = true
+
+        scope.launch {
+            try {
+                val prompt = buildPrompt()
+                if (prompt == null) {
+                    val noDataMsg = "No driving data found. Take a drive with CarDash connected and come back!"
+                    chatHistory = chatHistory + ChatMessage(noDataMsg, isUser = false)
+                    saveHistory(chatHistory)
+                    isThinking = false
+                    return@launch
+                }
+
+                val apiKey = prefsManager.getGeminiApiKey()
+                if (apiKey.isBlank()) {
+                    val errorMsg = "Error: No Gemini API Key found. Please add your token in Settings."
+                    chatHistory = chatHistory + ChatMessage(errorMsg, isUser = false)
+                    saveHistory(chatHistory)
+                    isThinking = false
+                    return@launch
+                }
+
+                val modelName = prefsManager.getGeminiModelName().ifBlank { "gemini-1.5-pro-latest" }
+                val model = GenerativeModel(modelName = modelName, apiKey = apiKey)
+                val response = model.generateContent(prompt).text
+                    ?: "Failed to generate analysis."
+
+                chatHistory = chatHistory + ChatMessage(response, isUser = false)
+                saveHistory(chatHistory)
+            } catch (e: Exception) {
+                val errorMsg = "Analysis Error: ${e.message}\nEnsure your API token is valid."
+                chatHistory = chatHistory + ChatMessage(errorMsg, isUser = false)
+                saveHistory(chatHistory)
+            } finally {
+                isThinking = false
+            }
         }
     }
 
@@ -53,7 +139,7 @@ fun MechanicScreen() {
             modifier = Modifier.padding(bottom = 16.dp)
         )
         
-        // Quick Actions
+        // Quick Actions — deterministic path
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -62,17 +148,29 @@ fun MechanicScreen() {
         ) {
             ElevatedFilterChip(
                 selected = false,
-                onClick = { submitQuery("Analyze the drive for the last 7 days.") },
+                onClick = {
+                    submitPresetAction("Analyze the drive for the last 7 days.") {
+                        promptBuilder.buildPromptForLastNDays(7)
+                    }
+                },
                 label = { Text("7-Day Analysis") }
             )
             ElevatedFilterChip(
                 selected = false,
-                onClick = { submitQuery("What was my lowest battery voltage recorded?") },
+                onClick = {
+                    submitPresetAction("What was my lowest battery voltage recorded?") {
+                        promptBuilder.buildBatteryHealthPrompt()
+                    }
+                },
                 label = { Text("Battery Health") }
             )
             ElevatedFilterChip(
                 selected = false,
-                onClick = { submitQuery("What is my average engine load while moving?") },
+                onClick = {
+                    submitPresetAction("What is my average engine load while moving?") {
+                        promptBuilder.buildEngineStrainPrompt()
+                    }
+                },
                 label = { Text("Engine Strain") }
             )
         }
@@ -100,7 +198,7 @@ fun MechanicScreen() {
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(12.dp)) {
                                 CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Analyzing Database...", style = MaterialTheme.typography.bodyMedium)
+                                Text("Analyzing...", style = MaterialTheme.typography.bodyMedium)
                             }
                         }
                     }
@@ -110,7 +208,7 @@ fun MechanicScreen() {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Input Field
+        // Input Field — agentic path (free-form)
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -125,7 +223,7 @@ fun MechanicScreen() {
             )
             Spacer(modifier = Modifier.width(8.dp))
             FilledIconButton(
-                onClick = { submitQuery(currentQuery) },
+                onClick = { submitFreeformQuery(currentQuery) },
                 enabled = currentQuery.isNotBlank() && !isThinking
             ) {
                 Icon(Icons.Default.Send, contentDescription = "Send")
@@ -143,7 +241,7 @@ fun MessageBubble(message: ChatMessage) {
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = if (message.isUser) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
-            modifier = Modifier.widthIn(max = 280.dp)
+            modifier = Modifier.widthIn(max = 600.dp)
         ) {
             Text(
                 text = message.text,

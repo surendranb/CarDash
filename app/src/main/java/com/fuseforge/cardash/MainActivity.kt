@@ -13,6 +13,8 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.core.app.ActivityCompat
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import com.fuseforge.cardash.ui.MainScreen
 import com.fuseforge.cardash.ui.theme.CarDashTheme
 import kotlinx.coroutines.launch
@@ -50,20 +52,25 @@ class MainActivity : ComponentActivity() {
             val scope = rememberCoroutineScope()
             
             CarDashTheme {
-                MainScreen(
-                    onPermissionNeeded = {
-                        scope.launch {
-                            val result = snackbarHostState.showSnackbar(
-                                message = "Bluetooth permissions required",
-                                actionLabel = "Grant",
-                                duration = SnackbarDuration.Indefinite
-                            )
-                            if (result == SnackbarResult.ActionPerformed) {
-                                permissionLauncher.launch(permissions)
+                androidx.compose.material3.Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.background
+                ) {
+                    MainScreen(
+                        onPermissionNeeded = {
+                            scope.launch {
+                                val result = snackbarHostState.showSnackbar(
+                                    message = "Bluetooth permissions required",
+                                    actionLabel = "Grant",
+                                    duration = SnackbarDuration.Indefinite
+                                )
+                                if (result == SnackbarResult.ActionPerformed) {
+                                    permissionLauncher.launch(permissions)
+                                }
                             }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     }

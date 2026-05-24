@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.util.*
+import com.fuseforge.cardash.data.PreferencesManager
 
 /**
  * The Telemetrist orchestrates the entire Car-to-State reactor.
@@ -16,6 +17,7 @@ import java.util.*
 class Telemetrist(
     private val bluetoothManager: BluetoothManager,
     private val sensorCollector: com.fuseforge.cardash.services.sensors.SensorCollector,
+    private val preferencesManager: PreferencesManager,
     private val externalScope: CoroutineScope
 ) {
     private val TAG = "Telemetrist"
@@ -40,9 +42,19 @@ class Telemetrist(
     private val ancillaryPids = listOf(
         ObdProtocol.COOLANT_TEMP to { s: VehicleState, r: String -> s.copy(coolantTemp = ObdProtocol.parseCoolantTemp(r) ?: s.coolantTemp) },
         ObdProtocol.BATTERY_VOLT to { s: VehicleState, r: String -> s.copy(batteryVoltage = ObdProtocol.parseVoltage(r) ?: s.batteryVoltage) },
-        ObdProtocol.FUEL_LEVEL to { s: VehicleState, r: String -> s.copy(fuelLevel = ObdProtocol.parseGenericPercentage(r, "41 2F") ?: s.fuelLevel) },
-        ObdProtocol.BARO_PRESS to { s: VehicleState, r: String -> s.copy(baroPressure = ObdProtocol.parseGenericPercentage(r, "41 33") ?: s.baroPressure) },
-        ObdProtocol.INTAKE_AIR_TEMP to { s: VehicleState, r: String -> s.copy(intakeAirTemp = ObdProtocol.parseCoolantTemp(r) ?: s.intakeAirTemp) }
+        ObdProtocol.FUEL_LEVEL to { s: VehicleState, r: String -> 
+            val raw = ObdProtocol.parseGenericPercentage(r, "41 2F")
+            val finalLevel = if (raw != null) {
+                val mult = preferencesManager.getFuelMultiplier()
+                (raw * mult).toInt().coerceIn(0, 100)
+            } else {
+                s.fuelLevel
+            }
+            s.copy(fuelLevel = finalLevel)
+        },
+        ObdProtocol.BARO_PRESS to { s: VehicleState, r: String -> s.copy(baroPressure = ObdProtocol.parseBaroPressure(r) ?: s.baroPressure) },
+        ObdProtocol.INTAKE_AIR_TEMP to { s: VehicleState, r: String -> s.copy(intakeAirTemp = ObdProtocol.parseIntakeAirTemp(r) ?: s.intakeAirTemp) },
+        ObdProtocol.FUEL_PRESS to { s: VehicleState, r: String -> s.copy(fuelPressure = ObdProtocol.parseFuelPressure(r) ?: s.fuelPressure) }
     )
 
     fun start(deviceAddress: String) {
@@ -59,7 +71,8 @@ class Telemetrist(
                             latitude = it.latitude,
                             longitude = it.longitude,
                             altitude = it.altitude,
-                            bearing = it.bearing
+                            bearing = it.bearing,
+                            gpsSpeedMps = it.speed
                         )}
                     }
                 }
@@ -101,13 +114,19 @@ class Telemetrist(
     private suspend fun establishLink(address: String): OBDLink {
         updateStatus(TelemetryStatus.CONNECTING)
         val socket = bluetoothManager.createSocket(address) ?: throw Exception("Socket Failed")
-        withContext(Dispatchers.IO) { socket.connect() }
+        withTimeout(8000) {
+            withContext(Dispatchers.IO) { socket.connect() }
+        }
         
         val link = OBDLink(socket)
         updateStatus(TelemetryStatus.HANDSHAKING)
         link.query(ObdProtocol.RESET, 2500)
         link.query(ObdProtocol.ECHO_OFF)
         link.query(ObdProtocol.PROTOCOL_AUTO, 3000)
+        
+        // Sever 'infinitely appended trips' by cutting a new session UUID on connect
+        _state.update { it.copy(sessionId = UUID.randomUUID().toString(), cycleCount = 0) }
+        
         return link
     }
 
@@ -149,7 +168,7 @@ class Telemetrist(
         val link = activeLink ?: return emptyList()
         isScanning = true
         return try {
-            link.query("03", 5000).split("\r").filter { it.startsWith("43") }.map { it.trim() }
+            ObdProtocol.parseTroubleCodes(link.query("03", 5000))
         } finally { isScanning = false }
     }
 

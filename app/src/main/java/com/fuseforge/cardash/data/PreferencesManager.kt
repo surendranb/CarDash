@@ -22,6 +22,7 @@ private const val KEY_GEMINI_API_KEY = "gemini_api_key"
 private const val KEY_GEMINI_MODEL_NAME = "gemini_model_name"
 private const val KEY_AI_INSIGHTS_ENABLED = "ai_insights_enabled"
 private const val KEY_ODOMETER_OFFSET = "odometer_offset"
+private const val KEY_FUEL_MULTIPLIER = "fuel_multiplier"
 
 class PreferencesManager(private val context: Context) {
     
@@ -152,6 +153,22 @@ class PreferencesManager(private val context: Context) {
 
     fun setOdometerOffset(km: Int) {
         preferences.edit().putInt(KEY_ODOMETER_OFFSET, km).apply()
+    }
+
+    fun getChatHistory(): String {
+        return preferences.getString("chat_history", "") ?: ""
+    }
+
+    fun setChatHistory(json: String) {
+        preferences.edit().putString("chat_history", json).apply()
+    }
+
+    fun getFuelMultiplier(): Float {
+        return preferences.getFloat(KEY_FUEL_MULTIPLIER, 1.0f)
+    }
+
+    fun setFuelMultiplier(multiplier: Float) {
+        preferences.edit().putFloat(KEY_FUEL_MULTIPLIER, multiplier).apply()
     }
 
     // Add other preference methods below as needed

@@ -111,6 +111,10 @@ class MetricViewModel(context: Context) : ViewModel() {
                 _baroPressure.value = state.baroPressure
                 _batteryVoltage.value = state.batteryVoltage
                 _engineRunning.value = state.isEngineRunning
+                _speedGps.value = (state.gpsSpeedMps * 3.6f).toInt()
+                _gForceX.value = state.gForceX
+                _gForceY.value = state.gForceY
+                _gForceZ.value = state.gForceZ
             }
             .launchIn(viewModelScope)
     }

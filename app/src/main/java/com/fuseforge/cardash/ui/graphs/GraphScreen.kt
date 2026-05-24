@@ -45,6 +45,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuseforge.cardash.ui.theme.CarDashTheme
+import com.fuseforge.cardash.ui.theme.Success
+import com.fuseforge.cardash.ui.theme.Warning
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -246,22 +248,50 @@ fun GraphScreen(
                         )
                     }
                 } else {
-                    graphData.forEach { (dataType, dataPoints) ->
-                        if (dataPoints.isNotEmpty()) {
-                            Text(
-                                text = dataType.displayName,
-                                style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                            LineChartCanvas(
-                                dataPoints = dataPoints,
+                    graphData.forEach { (parameter, dataPoints) ->
+                        Text(
+                            text = "${parameter.displayName} (${parameter.unit})",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(200.dp)
-                                    .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
-                        )
-                            Spacer(modifier = Modifier.height(16.dp))
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                        ) {
+                            if (dataPoints.isNotEmpty()) {
+                                val isPercentage = parameter.unit == "%"
+                                LineChartCanvas(
+                                    dataPoints = dataPoints,
+                                    modifier = Modifier.fillMaxSize(),
+                                    lineColor = if (parameter.id == "coolantTemp") Warning else Success,
+                                    yMin = if (isPercentage) 0.0 else null,
+                                    yMax = if (isPercentage) 100.0 else null
+                                )
+                            } else {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        "Waiting for ledger data...",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        "New metrics require a driving session to populate.",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    )
+                                }
+                            }
                         }
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }
@@ -279,24 +309,25 @@ fun ParameterChip(
         modifier = Modifier
             .clip(RoundedCornerShape(16.dp))
             .background(
-                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                else MaterialTheme.colorScheme.surfaceVariant
+                if (isSelected) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             )
             .border(
                 border = BorderStroke(
                     width = 1.dp,
                     color = if (isSelected) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.outline
+                    else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
                 ),
                 shape = RoundedCornerShape(16.dp)
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Text(
             text = parameter.displayName,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (isSelected) MaterialTheme.colorScheme.primary
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color = if (isSelected) MaterialTheme.colorScheme.onPrimary
                     else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
@@ -415,10 +446,13 @@ fun LineGraph(
                         .fillMaxSize()
                         .padding(horizontal = 8.dp, vertical = 24.dp) // Make room for labels
                 ) {
+                    val isPercentage = parameter.unit == "%"
                     LineChartCanvas(
                         dataPoints = dataPoints,
                         modifier = Modifier.fillMaxSize(),
-                        lineColor = MaterialTheme.colorScheme.primary
+                        lineColor = MaterialTheme.colorScheme.primary,
+                        yMin = if (isPercentage) 0.0 else null,
+                        yMax = if (isPercentage) 100.0 else null
                     )
                 }
             } else {

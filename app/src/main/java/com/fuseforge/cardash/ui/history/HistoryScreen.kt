@@ -75,9 +75,10 @@ fun HistoryScreen(
                     .padding(12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("TIME", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                Text("RPM / LOAD", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                Text("MIN V / MAX T", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                Text("TIME", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text("RPM / LOAD", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                Text("KPH / FUEL", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                Text("VITAL", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
             }
             
             // Ledger List
@@ -214,20 +215,23 @@ fun HeartbeatRow(hb: VehicleHeartbeat) {
         }
         
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("${hb.avgRpm ?: "-"} RPM", style = MaterialTheme.typography.bodyMedium)
+            Text("${hb.avgRpm ?: "-"} RPM", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
             Text("Load: ${hb.avgEngineLoad ?: "-"}%", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
         }
         
+        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("${hb.avgSpeed ?: 0} KPH", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+            val fuelText = if (hb.fuelLevel != null) "${hb.fuelLevel}%" else "-"
+            Text("Fuel: $fuelText", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+        }
+        
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+            val voltStr = hb.avgBatteryVoltage?.let { String.format(Locale.getDefault(), "%.1f", it) } ?: "-"
+            Text("${voltStr}V / ${hb.maxCoolantTemp ?: "-"}°C", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
             Text(
-                text = "${hb.minBatteryVoltage?.let { String.format(Locale.getDefault(), "%.1f", it) } ?: "-"}V",
-                style = MaterialTheme.typography.bodyMedium,
-                color = if ((hb.minBatteryVoltage ?: 14f) < 11.5f) ThemeError else MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                "Max: ${hb.maxCoolantTemp ?: "-"}°C", 
-                style = MaterialTheme.typography.labelSmall, 
-                color = if ((hb.maxCoolantTemp ?: 0) > 105) ThemeError else MaterialTheme.colorScheme.outline
+                if ((hb.maxCoolantTemp ?: 0) > 105) "⚠ OVERHEAT" else "Normal",
+                style = MaterialTheme.typography.labelSmall,
+                color = if ((hb.maxCoolantTemp ?: 0) > 105) ThemeError else Success
             )
         }
     }

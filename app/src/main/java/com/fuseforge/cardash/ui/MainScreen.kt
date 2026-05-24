@@ -136,6 +136,7 @@ fun MainScreen(
     if (tabSettings.showDiagnosticsTab) tabs.add("Diagnostics")
     if (tabSettings.showHistoryTab) tabs.add("History")
     if (com.fuseforge.cardash.data.PreferencesManager(context).isAiInsightsEnabled()) tabs.add("Assistant")
+    tabs.add("Settings")
     
     // Ensure selected tab is valid after settings change
     if (selectedTab >= tabs.size) {
@@ -216,17 +217,8 @@ fun MainScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Settings button
-                    IconButton(
-                        onClick = { showSettingsDialog = true },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = "Settings",
-                            tint = if (connectionState is MetricViewModel.ConnectionState.Connected) Success else if (connectionState is MetricViewModel.ConnectionState.Connecting) Warning else ThemeError
-                        )
-                    }
+                    // Replaced dialog trigger with permanent Settings Tab
+                    Spacer(modifier = Modifier.size(48.dp))
                     
                     // App title
                     Text(
@@ -237,9 +229,6 @@ fun MainScreen(
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
-                    
-                    // The Gemini AI button has been removed and replaced with a dedicated UI Tab.
-                    Spacer(modifier = Modifier.size(48.dp))
                     
                     // OBD Connection button
                     IconButton(
@@ -341,6 +330,7 @@ fun MainScreen(
                 }
                 "History" -> HistoryScreen()
                 "Assistant" -> com.fuseforge.cardash.ui.ai.MechanicScreen()
+                "Settings" -> com.fuseforge.cardash.ui.settings.SettingsScreen()
                 else -> MetricGridScreen(removeEngineStatus = true) // Default fallback
             }
         }

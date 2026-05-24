@@ -6,7 +6,6 @@ import com.fuseforge.cardash.data.db.VehicleHeartbeat
 import com.fuseforge.cardash.model.TelemetryStatus
 import com.fuseforge.cardash.model.VehicleState
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.collectLatest
 import java.util.*
 
 /**
@@ -21,41 +20,51 @@ class VehicleLedger(
     private val TAG = "VehicleLedger"
     private var ledgerJob: Job? = null
     
-    // Aggregation Buffer
+    // Aggregation Buffers
     private var pointsInMinute = 0
+    private var idlePointsInMinute = 0
+    
     private var rpmSum = 0L
     private var loadSum = 0L
-    private var minVoltage = 20f
-    private var maxCoolant = 0
+    private var speedSum = 0L
+    private var throttleSum = 0L
+    private var coolantMax = 0
+    private var iatSum = 0L
+    private var voltMin = 20f
+    private var fuelLevelLast: Int? = null
+    private var baroPressureSum = 0L
+    
     private var lastMinuteMark = System.currentTimeMillis()
 
     fun start() {
         if (ledgerJob != null) return
         
+        lastMinuteMark = System.currentTimeMillis()
+        pointsInMinute = 0
+        idlePointsInMinute = 0
+        
         ledgerJob = scope.launch {
-            Log.i(TAG, "History Ledger Active. Listening for vehicle pulses.")
-            
             telemetrist.state.collect { state ->
-                if (state.connectionStatus == TelemetryStatus.ACTIVE) {
+                val isActive = state.connectionStatus == TelemetryStatus.ACTIVE
+                val isRunning = state.isEngineRunning
+                
+                if (isActive && isRunning) {
                     aggregate(state)
+                } else if (pointsInMinute > 0) {
+                    commitHeartbeat()
                 }
                 
-                // Deterministic Minute Check
                 val now = System.currentTimeMillis()
                 if (now - lastMinuteMark >= 60000) {
                     commitHeartbeat()
-                    lastMinuteMark = now
                 }
             }
         }
     }
 
     fun stop() {
-        Log.i(TAG, "History Ledger Shutdown. Performing final flush.")
         ledgerJob?.cancel()
         ledgerJob = null
-        
-        // Final flush logic
         if (pointsInMinute > 0) {
             scope.launch(Dispatchers.IO) {
                 commitHeartbeat()
@@ -65,39 +74,58 @@ class VehicleLedger(
 
     private fun aggregate(state: VehicleState) {
         pointsInMinute++
+        if (state.speedKph <= 0) {
+            idlePointsInMinute++
+        }
         rpmSum += state.rpm
         loadSum += state.engineLoad
-        if (state.batteryVoltage > 0) minVoltage = minOf(minVoltage, state.batteryVoltage)
-        maxCoolant = maxOf(maxCoolant, state.coolantTemp)
+        speedSum += state.speedKph
+        throttleSum += state.throttlePos
+        iatSum += state.intakeAirTemp
+        baroPressureSum += state.baroPressure
+        coolantMax = maxOf(coolantMax, state.coolantTemp)
+        if (state.batteryVoltage > 0) voltMin = minOf(voltMin, state.batteryVoltage)
+        fuelLevelLast = state.fuelLevel
     }
 
     private suspend fun commitHeartbeat() {
         if (pointsInMinute == 0) return
         
+        val now = System.currentTimeMillis()
+        val elapsedSeconds = ((now - lastMinuteMark) / 1000).coerceAtMost(60).coerceAtLeast(1).toInt()
+        val idleRatio = idlePointsInMinute.toFloat() / pointsInMinute
+        val idlingSeconds = (elapsedSeconds * idleRatio).toInt()
+
         val heartbeat = VehicleHeartbeat(
+            tripId = telemetrist.state.value.sessionId,
             timestamp = Date(),
-            activeSeconds = pointsInMinute,
+            activeSeconds = elapsedSeconds,
+            idlingSeconds = idlingSeconds,
             avgRpm = (rpmSum / pointsInMinute).toInt(),
             avgEngineLoad = (loadSum / pointsInMinute).toInt(),
-            minBatteryVoltage = if (minVoltage < 20) minVoltage else null,
-            maxCoolantTemp = if (maxCoolant > 0) maxCoolant else null,
-            tripId = telemetrist.state.value.sessionId
+            avgSpeed = (speedSum / pointsInMinute).toInt(),
+            avgThrottlePosition = (throttleSum / pointsInMinute).toInt(),
+            avgIntakeAirTemp = (iatSum / pointsInMinute).toInt(),
+            avgBatteryVoltage = if (voltMin < 20) (voltMin) else null, // Simplified
+            maxCoolantTemp = if (coolantMax > 0) coolantMax else null,
+            baroPressure = (baroPressureSum / pointsInMinute).toInt(),
+            fuelLevel = fuelLevelLast
         )
 
         withContext(Dispatchers.IO) {
             try {
                 database.obdLogDao().insertHeartbeat(heartbeat)
-                Log.i(TAG, "Heartbeat Committed: ${pointsInMinute}s of activity recorded.")
+                Log.i(TAG, "Heartbeat Committed: ${elapsedSeconds}s active, ${idlingSeconds}s idling.")
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to commit heartbeat: ${e.message}")
+                Log.e(TAG, "Failed to commit: ${e.message}")
             }
         }
 
-        // Reset buffers
+        // Reset
+        lastMinuteMark = now
         pointsInMinute = 0
-        rpmSum = 0
-        loadSum = 0
-        minVoltage = 20f
-        maxCoolant = 0
+        idlePointsInMinute = 0
+        rpmSum = 0; loadSum = 0; speedSum = 0; throttleSum = 0; iatSum = 0; baroPressureSum = 0
+        coolantMax = 0; voltMin = 20f
     }
 }
