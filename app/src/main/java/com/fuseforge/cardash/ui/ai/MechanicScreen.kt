@@ -1,6 +1,8 @@
 package com.fuseforge.cardash.ui.ai
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -143,7 +145,7 @@ fun MechanicScreen() {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp),
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             ElevatedFilterChip(
@@ -172,6 +174,15 @@ fun MechanicScreen() {
                     }
                 },
                 label = { Text("Engine Strain") }
+            )
+            ElevatedFilterChip(
+                selected = false,
+                onClick = {
+                    submitPresetAction("What should my fuel multiplier be?") {
+                        promptBuilder.buildFuelCalibrationPrompt()
+                    }
+                },
+                label = { Text("Fuel Multiplier") }
             )
         }
 

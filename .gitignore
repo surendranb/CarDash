@@ -46,3 +46,4 @@ swap_files.sh
 .gradle/
 build/
 scratch/
+parse_test.kt

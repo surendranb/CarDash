@@ -71,10 +71,11 @@ object ObdProtocol {
 
     fun parseVoltage(response: String): Float? {
         return try {
-            val decimalPattern = "^\\s*([0-9]+\\.?[0-9]*)\\s*V?\\s*$".toRegex(RegexOption.IGNORE_CASE)
-            val match = decimalPattern.find(response)
-            if (match != null) {
-                match.groupValues[1].toFloatOrNull()
+            if (response.contains("V", ignoreCase = true)) {
+                // Handle AT RV response
+                val decimalPattern = "([0-9]+\\.?[0-9]*)\\s*V?".toRegex(RegexOption.IGNORE_CASE)
+                val match = decimalPattern.find(response)
+                match?.groupValues?.get(1)?.toFloatOrNull()
             } else {
                 // Handle PID 01 42 response
                 val pattern = "(?:41 42|4142) ?([0-9A-F]{2}) ?([0-9A-F]{2})".toRegex(RegexOption.IGNORE_CASE)

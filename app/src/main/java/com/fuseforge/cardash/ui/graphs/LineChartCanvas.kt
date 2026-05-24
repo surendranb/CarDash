@@ -63,29 +63,31 @@ fun LineChartCanvas(
     Canvas(
         modifier = modifier
             .fillMaxSize()
-            .padding(padding)
+            .padding(16.dp)
     ) {
-        val height = size.height
-        val width = size.width
+        val graphPaddingLeft = 80f
+        val graphPaddingBottom = 40f
+        val height = size.height - graphPaddingBottom
+        val width = size.width - graphPaddingLeft
         
         // Draw axes
         drawLine(
             color = Color.Gray,
-            start = Offset(0f, height),
-            end = Offset(width, height),
+            start = Offset(graphPaddingLeft, height),
+            end = Offset(size.width, height),
             strokeWidth = 1f
         )
         
         drawLine(
             color = Color.Gray,
-            start = Offset(0f, 0f),
-            end = Offset(0f, height),
+            start = Offset(graphPaddingLeft, 0f),
+            end = Offset(graphPaddingLeft, height),
             strokeWidth = 1f
         )
         
         // Calculate points for the line chart
         val points = dataPoints.map { point ->
-            val x = ((point.timestamp.time - minTimestamp) / timeRange.toFloat() * width).toFloat()
+            val x = graphPaddingLeft + ((point.timestamp.time - minTimestamp) / timeRange.toFloat() * width).toFloat()
             val y = (height - ((point.value - minValue) / valueRange * height)).toFloat()
             Offset(x, y)
         }
@@ -130,8 +132,8 @@ fun LineChartCanvas(
             val y = height - (height * i / numHorizontalLines)
             drawLine(
                 color = Color.Gray.copy(alpha = 0.3f),
-                start = Offset(0f, y),
-                end = Offset(width, y),
+                start = Offset(graphPaddingLeft, y),
+                end = Offset(size.width, y),
                 strokeWidth = 0.5f
             )
             
@@ -139,8 +141,8 @@ fun LineChartCanvas(
             val value = minValue + (i.toFloat() / numHorizontalLines) * valueRange
             drawContext.canvas.nativeCanvas.drawText(
                 String.format("%.1f", value),
-                10f,
-                y - 10f,
+                0f,
+                y + 10f,
                 android.graphics.Paint().apply {
                     color = android.graphics.Color.GRAY
                     textSize = 30f
@@ -150,7 +152,7 @@ fun LineChartCanvas(
         
         // Vertical grid lines
         for (i in 0..numVerticalLines) {
-            val x = width * i / numVerticalLines
+            val x = graphPaddingLeft + (width * i / numVerticalLines)
             drawLine(
                 color = Color.Gray.copy(alpha = 0.3f),
                 start = Offset(x, 0f),
@@ -168,7 +170,7 @@ fun LineChartCanvas(
                 drawContext.canvas.nativeCanvas.drawText(
                     label,
                     x - 20f,
-                    height - 10f,
+                    height + 30f,
                     android.graphics.Paint().apply {
                         color = android.graphics.Color.GRAY
                         textSize = 30f

@@ -192,6 +192,36 @@ class GeminiPromptBuilder(private val context: Context) {
         }
     }
 
+    /**
+     * Builds a prompt for recommending a fuel multiplier.
+     */
+    suspend fun buildFuelCalibrationPrompt(): String? = withContext(Dispatchers.IO) {
+        try {
+            val prefsManager = com.fuseforge.cardash.data.PreferencesManager(context)
+            val vehicleStr = prefsManager.getVehicleProfile()
+
+            return@withContext """
+                Act as an expert automotive telematics engineer.
+                ${if (vehicleStr.isNotBlank()) "My vehicle is a: $vehicleStr." else "I have not specified my vehicle profile."}
+                
+                I am using an OBD-II scanner that reads fuel level via PID 01 2F.
+                Some vehicle manufacturers scale their fuel percentage responses differently. 
+                Our app uses a "Fuel Multiplier" setting to correct this reading.
+                For example:
+                - A multiplier of 1.0 means we take the raw percentage as-is.
+                - A multiplier of 0.392 (100/255) is often used if the manufacturer reports raw out of 255.
+                
+                Please:
+                1. Based on my vehicle profile, tell me what the correct Fuel Multiplier is likely to be.
+                2. Explain how I can calibrate it myself if the guess is wrong (e.g. fill the tank and see what it reads).
+                3. Keep the advice simple and action-oriented.
+            """.trimIndent()
+        } catch (e: Exception) {
+            Log.e("GeminiPromptBuilder", "Error building fuel calibration prompt: ${e.message}", e)
+            return@withContext null
+        }
+    }
+
     private fun buildTripSummaryTable(tripGroups: Map<String, List<VehicleHeartbeat>>): String {
         val header = "| Trip | Date | Duration (min) | Avg Speed | Max Speed | Avg RPM | Max RPM | Avg Load | Fuel Start→End | Min Voltage |\n|---|---|---|---|---|---|---|---|---|---|"
         val rows = tripGroups.map { (tripId, hbs) ->

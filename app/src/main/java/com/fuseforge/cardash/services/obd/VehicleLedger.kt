@@ -31,6 +31,9 @@ class VehicleLedger(
     private var coolantMax = 0
     private var iatSum = 0L
     private var voltMin = 20f
+    private var voltMax = 0f
+    private var speedMax = 0
+    private var rpmMax = 0
     private var fuelLevelLast: Int? = null
     private var baroPressureSum = 0L
     
@@ -84,7 +87,12 @@ class VehicleLedger(
         iatSum += state.intakeAirTemp
         baroPressureSum += state.baroPressure
         coolantMax = maxOf(coolantMax, state.coolantTemp)
-        if (state.batteryVoltage > 0) voltMin = minOf(voltMin, state.batteryVoltage)
+        speedMax = maxOf(speedMax, state.speedKph)
+        rpmMax = maxOf(rpmMax, state.rpm)
+        if (state.batteryVoltage > 0) {
+            voltMin = minOf(voltMin, state.batteryVoltage)
+            voltMax = maxOf(voltMax, state.batteryVoltage)
+        }
         fuelLevelLast = state.fuelLevel
     }
 
@@ -107,6 +115,10 @@ class VehicleLedger(
             avgThrottlePosition = (throttleSum / pointsInMinute).toInt(),
             avgIntakeAirTemp = (iatSum / pointsInMinute).toInt(),
             avgBatteryVoltage = if (voltMin < 20) (voltMin) else null, // Simplified
+            minBatteryVoltage = if (voltMin < 20) (voltMin) else null,
+            maxBatteryVoltage = if (voltMax > 0) (voltMax) else null,
+            maxSpeed = if (speedMax > 0) speedMax else null,
+            maxRpm = if (rpmMax > 0) rpmMax else null,
             maxCoolantTemp = if (coolantMax > 0) coolantMax else null,
             baroPressure = (baroPressureSum / pointsInMinute).toInt(),
             fuelLevel = fuelLevelLast
@@ -126,6 +138,6 @@ class VehicleLedger(
         pointsInMinute = 0
         idlePointsInMinute = 0
         rpmSum = 0; loadSum = 0; speedSum = 0; throttleSum = 0; iatSum = 0; baroPressureSum = 0
-        coolantMax = 0; voltMin = 20f
+        coolantMax = 0; voltMin = 20f; voltMax = 0f; speedMax = 0; rpmMax = 0
     }
 }
