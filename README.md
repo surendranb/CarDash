@@ -13,9 +13,9 @@
   
 </div>
 
-## 🚗 About CarDash (Reactor V2)
+## 🚗 About CarDash
 
-CarDash transforms your Android device into a powerful automotive dashboard, connecting to your vehicle's OBD-II port to provide real-time metrics and deep diagnostics. With the new **Reactor V2 Architecture**, CarDash now maintains a persistent "Digital Clone Ledger" of your vehicle's health and employs Google Gemini as an on-demand virtual mechanic.
+CarDash transforms your Android device into a powerful automotive dashboard, connecting to your vehicle's OBD-II port to provide real-time metrics and deep diagnostics. It maintains a persistent local ledger of your vehicle's health and employs Google Gemini as an on-demand virtual AI assistant.
 
 ## 🔒 Privacy First
 
@@ -25,15 +25,19 @@ CarDash is built with privacy as a core principle:
 * **No Data Collection** - We don't track, collect, or transmit your vehicle data
 * **No Analytics** - No usage tracking or analytics frameworks
 * **No Advertisements** - Zero ads or third-party tracking
-* **100% Local Storage** - Your Digital Clone Ledger stays on your device SQLite database
+* **100% Local Storage** - Your vehicle data stays on your device inside a local Room/SQLite database
 
 Your vehicle data belongs to you alone. Period.
 
 <div align="center">
 
-|Real-time Metrics Dashboard|Digital AI Mechanic|
-|:-------------------------:|:----------------------:|
-|![Dashboard View](mockup_dashboard.png)|![Settings Screen](settings.png)|
+| 📈 Trend Graphs | 📋 History Table |
+| :---: | :---: |
+| ![Trend Graphs](docs/1.jpg) | ![History Table](docs/2.jpg) |
+
+| 💬 AI Assistant | ⚙️ Settings |
+| :---: | :---: |
+| ![AI Assistant](docs/3.jpg) | ![Settings](docs/4.jpg) |
 
 </div>
 
@@ -45,10 +49,10 @@ Your vehicle data belongs to you alone. Period.
 * **System Status**: Fuel level, fuel pressure, barometric pressure, and battery voltage
 * **Android Auto Ready**: View key metrics securely on your vehicle's HUD while driving.
 
-### 🧠 Gemini AI Mechanic (Agentic vs Deterministic)
-* **Digital Clone Ledger**: CarDash logs 1-minute heartbeats of your vehicle's vital signs (RPM, voltages, thermal limits).
+### 🧠 Gemini AI Assistant
+* **Local Vehicle Ledger**: CarDash logs 1-minute heartbeats of your vehicle's vital signs (RPM, voltages, thermal limits).
 * **Deterministic Analysis**: Fast, precise analytics via pre-computed logic (e.g., 7-day average strain, minimum voltage checks).
-* **Agentic Chat**: Ask your mechanic anything (e.g. "Did my engine overheat yesterday?"). The AI writes its own SQLite queries to analyze your ledger securely.
+* **Agentic Chat**: Ask your assistant anything (e.g. "Did my engine overheat yesterday?"). The AI writes its own SQL queries to analyze your local database (built on Room/SQLite) securely.
 * **Vehicle Context**: Save your car's Make and Model to get manufacturer-specific diagnostic advice.
 
 ### 📈 Data Visualization & Calibration
@@ -58,7 +62,7 @@ Your vehicle data belongs to you alone. Period.
 ### 🔧 Basic Diagnostics
 * **OBD-II Error Codes**: Read diagnostic trouble codes
 * **Log Viewer**: View basic communication logs with your vehicle's ECU
-* **Offline-First**: Only the AI Mechanic explicitly requires an internet connection via the Gemini API token.
+* **Offline-First**: Only the AI Assistant explicitly requires an internet connection via the Gemini API token.
 
 ## 🛠️ Requirements
 
@@ -98,7 +102,7 @@ CarDash is available for internal testing via Google Play:
 ## 🔄 Project Roadmap
 
 ### Recently Added (v2.3.3)
-- ✅ **Reactor V2 Architecture**: Stabilized data flow with a central `VehicleState` cache and asynchronous SQLite `VehicleLedger`.
+- ✅ **Local Vehicle Ledger**: Stabilized data flow with a central `VehicleState` cache and asynchronous SQLite `VehicleLedger`.
 - ✅ **AI Agentic Queries**: LLM writes its own SQLite queries locally to answer complex historical diagnostic questions.
 - ✅ **Renault/Nissan Fuel Calibration**: Resolved issues with CMF-A+ generic OBD percentages by introducing manual multi-factor calibration (e.g. 1.75 scaling factor).
 - ✅ **Fuel Multiplier AI Chip**: Added a preset assistant quick-action chip to calculate fuel multiplier easily.

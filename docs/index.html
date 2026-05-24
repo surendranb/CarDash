@@ -7,21 +7,20 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Plus+Jakarta+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --bg-base: #0a0e17;
-            --bg-surface: rgba(18, 26, 47, 0.6);
-            --bg-card: rgba(30, 41, 71, 0.4);
-            --accent: #2563eb;
-            --accent-glow: rgba(37, 99, 235, 0.4);
-            --accent-green: #10b981;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
+            --bg-base: #f8fafc;
+            --bg-card: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
             --text-muted: #64748b;
-            --border-color: rgba(255, 255, 255, 0.08);
-            --border-glow: rgba(37, 99, 235, 0.15);
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --accent-glow: rgba(37, 99, 235, 0.12);
+            --accent-green: #059669;
+            --border-color: #e2e8f0;
             --radius-lg: 16px;
             --radius-md: 12px;
             --font-display: 'Outfit', sans-serif;
@@ -41,19 +40,19 @@
             line-height: 1.6;
             overflow-x: hidden;
             background-image: 
-                radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.1) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.08) 0%, transparent 40%);
+                radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 70%, rgba(5, 150, 105, 0.04) 0%, transparent 40%);
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1100px;
             margin: 0 auto;
             padding: 0 24px;
         }
 
         /* Header */
         header {
-            padding: 40px 0;
+            padding: 30px 0;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -71,16 +70,14 @@
         }
 
         .brand img {
-            width: 40px;
-            height: 40px;
+            width: 38px;
+            height: 38px;
             object-fit: contain;
             border-radius: 8px;
         }
 
         .brand span {
-            background: linear-gradient(135deg, var(--text-primary) 30%, var(--text-secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: var(--text-primary);
         }
 
         .github-link {
@@ -89,65 +86,46 @@
             gap: 8px;
             color: var(--text-secondary);
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 600;
             padding: 8px 16px;
             border-radius: 20px;
             border: 1px solid var(--border-color);
-            background: rgba(255, 255, 255, 0.03);
+            background: var(--bg-card);
             transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
 
         .github-link:hover {
-            color: var(--text-primary);
-            background: rgba(255, 255, 255, 0.08);
-            border-color: var(--text-secondary);
+            color: var(--accent);
+            border-color: var(--accent);
+            background: var(--bg-base);
         }
 
         /* Hero Section */
         .hero {
-            padding: 80px 0 60px 0;
+            padding: 80px 0 50px 0;
             text-align: center;
-            position: relative;
-        }
-
-        .badge-v2 {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(37, 99, 235, 0.15);
-            border: 1px solid rgba(37, 99, 235, 0.3);
-            color: #60a5fa;
-            padding: 6px 14px;
-            border-radius: 30px;
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 24px;
-            font-family: var(--font-display);
-            text-transform: uppercase;
-            letter-spacing: 1px;
         }
 
         .hero h1 {
             font-family: var(--font-display);
-            font-size: 56px;
+            font-size: 52px;
             font-weight: 800;
             line-height: 1.15;
-            letter-spacing: -1.5px;
-            margin-bottom: 24px;
-            background: linear-gradient(135deg, #ffffff 40%, #93c5fd);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            letter-spacing: -1.2px;
+            margin-bottom: 20px;
+            color: var(--text-primary);
         }
 
         @media (max-width: 768px) {
             .hero h1 {
-                font-size: 40px;
+                font-size: 38px;
             }
         }
 
         .hero p {
-            max-width: 680px;
-            margin: 0 auto 40px auto;
+            max-width: 640px;
+            margin: 0 auto 36px auto;
             color: var(--text-secondary);
             font-size: 18px;
             line-height: 1.6;
@@ -157,69 +135,79 @@
         .cta-group {
             display: flex;
             justify-content: center;
-            gap: 16px;
+            gap: 14px;
             flex-wrap: wrap;
-            margin-bottom: 60px;
+            margin-bottom: 50px;
         }
 
         .btn {
             display: inline-flex;
             align-items: center;
-            gap: 10px;
-            padding: 14px 28px;
+            gap: 8px;
+            padding: 12px 24px;
             border-radius: var(--radius-md);
             font-weight: 600;
             text-decoration: none;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.2s ease-in-out;
             font-family: var(--font-display);
+            font-size: 15px;
             cursor: pointer;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--accent), #1d4ed8);
+            background-color: var(--accent);
             color: white;
-            box-shadow: 0 4px 20px var(--accent-glow);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 12px var(--accent-glow);
+            border: 1px solid rgba(0, 0, 0, 0.05);
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.6);
+            background-color: var(--accent-hover);
+            transform: translateY(-1px);
         }
 
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.05);
+            background-color: var(--bg-card);
             color: var(--text-primary);
             border: 1px solid var(--border-color);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
 
         .btn-secondary:hover {
-            transform: translateY(-2px);
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.2);
+            background-color: var(--bg-base);
+            border-color: var(--text-muted);
+            transform: translateY(-1px);
         }
 
         .btn-green {
-            background: rgba(16, 185, 129, 0.1);
+            background-color: var(--bg-card);
             color: var(--accent-green);
-            border: 1px solid rgba(16, 185, 129, 0.3);
+            border: 1px solid rgba(5, 150, 105, 0.25);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
         }
 
         .btn-green:hover {
-            transform: translateY(-2px);
-            background: rgba(16, 185, 129, 0.15);
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
+            background-color: rgba(5, 150, 105, 0.05);
+            transform: translateY(-1px);
         }
 
-        /* Mockups Section */
+        /* Showcase Grid */
         .showcase {
-            margin-bottom: 100px;
+            margin-bottom: 80px;
+        }
+
+        .showcase-title {
+            text-align: center;
+            font-family: var(--font-display);
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 40px;
         }
 
         .mockup-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 32px;
             justify-content: center;
         }
 
@@ -230,123 +218,117 @@
         }
 
         .mockup-card {
-            background: var(--bg-surface);
+            background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-lg);
             padding: 24px;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(12px);
-            transition: transform 0.3s ease, border-color 0.3s ease;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+            transition: transform 0.2s ease, border-color 0.2s ease;
         }
 
         .mockup-card:hover {
-            transform: translateY(-4px);
-            border-color: var(--border-glow);
+            transform: translateY(-2px);
+            border-color: rgba(37, 99, 235, 0.3);
         }
 
         .mockup-card h3 {
             font-family: var(--font-display);
-            margin-bottom: 16px;
-            font-size: 20px;
+            margin-bottom: 12px;
+            font-size: 18px;
+            color: var(--text-primary);
         }
 
         .mockup-card img {
             width: 100%;
-            max-width: 320px;
-            border-radius: 8px;
+            height: auto;
+            max-width: 290px;
+            border-radius: var(--radius-md);
             object-fit: cover;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
         }
 
-        /* Feature Cards */
-        .features {
-            padding: 80px 0;
+        /* Core Capabilities List */
+        .capabilities {
+            background-color: var(--bg-card);
             border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            padding: 80px 0;
+            margin-bottom: 60px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.01);
         }
 
         .section-title {
             text-align: center;
             font-family: var(--font-display);
-            font-size: 36px;
+            font-size: 32px;
             font-weight: 800;
-            margin-bottom: 48px;
+            margin-bottom: 36px;
+            color: var(--text-primary);
         }
 
-        .feature-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 24px;
+        .capabilities-list {
+            max-width: 800px;
+            margin: 0 auto;
+            list-style: none;
         }
 
-        .feature-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            padding: 32px;
-            transition: all 0.3s ease;
-        }
-
-        .feature-card:hover {
-            background: rgba(30, 41, 71, 0.6);
-            border-color: var(--border-glow);
-            transform: translateY(-2px);
-        }
-
-        .icon-wrapper {
-            width: 48px;
-            height: 48px;
-            border-radius: var(--radius-md);
-            background: rgba(37, 99, 235, 0.1);
-            color: var(--accent);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(37, 99, 235, 0.2);
-        }
-
-        .feature-card.privacy .icon-wrapper {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--accent-green);
-            border-color: rgba(16, 185, 129, 0.2);
-        }
-
-        .feature-card h3 {
-            font-family: var(--font-display);
-            font-size: 22px;
-            margin-bottom: 12px;
-        }
-
-        .feature-card p {
+        .capabilities-list li {
+            position: relative;
+            padding-left: 32px;
+            margin-bottom: 24px;
+            font-size: 16px;
             color: var(--text-secondary);
-            font-size: 15px;
-            line-height: 1.6;
+        }
+
+        .capabilities-list li strong {
+            color: var(--text-primary);
+            font-size: 18px;
+            display: block;
+            margin-bottom: 4px;
+            font-family: var(--font-display);
+        }
+
+        .capabilities-list li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            top: 2px;
+            color: var(--accent-green);
+            font-weight: 800;
+            font-size: 18px;
+            line-height: 1;
         }
 
         /* Footer */
         footer {
-            padding: 60px 0;
-            border-top: 1px solid var(--border-color);
+            padding: 50px 0;
             text-align: center;
             color: var(--text-muted);
             font-size: 14px;
+            border-top: 1px solid var(--border-color);
         }
 
         footer p {
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
 
         footer a {
-            color: var(--text-secondary);
+            color: var(--accent);
             text-decoration: none;
-            transition: color 0.2s;
+            font-weight: 600;
+            transition: color 0.15s;
         }
 
         footer a:hover {
-            color: var(--text-primary);
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        .footer-sep {
+            margin: 0 10px;
+            color: var(--border-color);
         }
     </style>
 </head>
@@ -360,112 +342,95 @@
                 <span>CarDash</span>
             </div>
             <a href="https://github.com/surendranb/CarDash" class="github-link" target="_blank">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
-                GitHub
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                Repository
             </a>
         </header>
 
         <!-- Hero Section -->
         <section class="hero">
-            <div class="badge-v2">Reactor V2 Architecture</div>
-            <h1>Your Vehicle's Digital Twin<br>& AI Mechanic</h1>
-            <p>CarDash is a privacy-first diagnostics dashboard connecting securely to your vehicle's OBD-II port. Log persistent heartbeats, render live graphs, and chat with Google Gemini as an on-demand virtual mechanic.</p>
+            <h1>Your Vehicle's Digital Twin &<br>AI Assistant</h1>
+            <p>CarDash is a privacy-first diagnostics dashboard connecting securely to your vehicle's OBD-II port. Log persistent heartbeats, render live graphs, and converse with a local AI assistant to monitor and analyze vehicle health.</p>
             
             <div class="cta-group">
-                <!-- Links updated to point to the GitHub releases structure -->
                 <a href="https://github.com/surendranb/CarDash/releases/latest" class="btn btn-primary">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                     Download APK / AAB
                 </a>
                 <a href="https://play.google.com/apps/internaltest/4700669721171506027" class="btn btn-green" target="_blank">
                     Join Play Store Testing
-                </a>
-                <a href="https://github.com/surendranb/CarDash" class="btn btn-secondary" target="_blank">
-                    View Codebase
                 </a>
             </div>
         </section>
 
         <!-- Showcase Section -->
         <section class="showcase">
+            <h2 class="showcase-title">App Walkthrough</h2>
             <div class="mockup-grid">
                 <div class="mockup-card">
-                    <h3>📊 Live Dashboard Metrics</h3>
-                    <img src="mockup_dashboard.png" alt="Real-time Metrics Dashboard">
+                    <h3>📈 Trend Graphs</h3>
+                    <img src="1.jpg" alt="Trend Graphs Screen">
                 </div>
                 <div class="mockup-card">
-                    <h3>🧠 Gemini Virtual Mechanic</h3>
-                    <img src="settings.png" alt="Settings & Model Selection Panels">
+                    <h3>📋 History Table</h3>
+                    <img src="2.jpg" alt="History Table Screen">
+                </div>
+                <div class="mockup-card">
+                    <h3>💬 AI Assistant</h3>
+                    <img src="3.jpg" alt="AI Assistant Screen">
+                </div>
+                <div class="mockup-card">
+                    <h3>⚙️ Settings</h3>
+                    <img src="4.jpg" alt="Settings Screen">
                 </div>
             </div>
         </section>
-
-        <!-- Features Section -->
-        <section class="features">
-            <h2 class="section-title">Core Capability Specs</h2>
-            <div class="feature-grid">
-                <!-- Feature 1 -->
-                <div class="feature-card privacy">
-                    <div class="icon-wrapper">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                    </div>
-                    <h3>100% Privacy Focused</h3>
-                    <p>No account required, no online trackers, no advertisements, and zero background analytics. All logging databases are saved entirely locally on your SQLite device storage.</p>
-                </div>
-                
-                <!-- Feature 2 -->
-                <div class="feature-card">
-                    <div class="icon-wrapper">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                    </div>
-                    <h3>Reactor V2 Ledger</h3>
-                    <p>Aggregates 1-minute vehicle heartbeats (RPM, voltage, thermal load) into a high-performance local ledger. Detects outliers, tracks diagnostics logs, and syncs sensors seamlessly.</p>
-                </div>
-
-                <!-- Feature 3 -->
-                <div class="feature-card">
-                    <div class="icon-wrapper">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                    </div>
-                    <h3>Local SQL Agentic Chat</h3>
-                    <p>Query your ledger in natural language. The Gemini API translates questions (e.g. "When was my engine under maximum strain?") into SQL, queries the database, and narrates insights.</p>
-                </div>
-
-                <!-- Feature 4 -->
-                <div class="feature-card">
-                    <div class="icon-wrapper">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
-                    </div>
-                    <h3>Hardware Calibrations</h3>
-                    <p>Built-in configurations for hardware quirks, including nominal fuel multiplier scalars to correct tank size differences (e.g. Renault/Nissan CMF-A+ generic 70L scaling to physical 40L tanks).</p>
-                </div>
-
-                <!-- Feature 5 -->
-                <div class="feature-card">
-                    <div class="icon-wrapper">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path></svg>
-                    </div>
-                    <h3>Canvas Trend Visualizer</h3>
-                    <p>Custom Jetpack Compose Canvas graphs with clear, scaling relative x-axis duration timestamps and y-axis metric bounds, ensuring clean data representations with zero layout overlap.</p>
-                </div>
-
-                <!-- Feature 6 -->
-                <div class="feature-card">
-                    <div class="icon-wrapper">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-                    </div>
-                    <h3>Android Auto HUD</h3>
-                    <p>Integrates natively with Android Auto templates to mirror active speeds, RPM levels, and thermal conditions safely onto your vehicle's primary center console display.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Footer -->
-        <footer>
-            <p>&copy; 2026 CarDash Project. Licensed under the MIT License.</p>
-            <p>Built independently by <a href="https://github.com/surendranb" target="_blank">Surendran</a>. Not affiliated with any vehicle manufacturer.</p>
-        </footer>
     </div>
+
+    <!-- Core Capabilities Section -->
+    <section class="capabilities">
+        <div class="container">
+            <h2 class="section-title">Core Capabilities</h2>
+            <ul class="capabilities-list">
+                <li>
+                    <strong>100% Privacy Focused</strong>
+                    No registration required, zero internet analytics frameworks, and no ads. All vehicle data is stored fully locally on your device in a Room-managed SQLite database.
+                </li>
+                <li>
+                    <strong>Persistent Local Ledger</strong>
+                    Saves 1-minute vehicle heartbeats (RPM, voltage, thermal limits, speed) while the engine is running to build a comprehensive historical record of driving sessions.
+                </li>
+                <li>
+                    <strong>Gemini AI Assistant Integration</strong>
+                    Queries local databases in natural language. The assistant converts user questions (e.g., "What was my peak RPM yesterday?") into local SQL queries, retrieves the answer securely, and narrates diagnostics.
+                </li>
+                <li>
+                    <strong>Multi-Factor Hardware Calibration</strong>
+                    Allows adjusting OBD telemetry values to correct vehicle sensor irregularities, such as custom fuel gauge scaling factors for Renault/Nissan CMF-A+ platforms.
+                </li>
+                <li>
+                    <strong>Modern Graph Visualization</strong>
+                    Generates clean, scaling Compose Canvas trend graphs indicating precise Y-axis bounds and relative X-axis timestamps without text or line overlap.
+                </li>
+                <li>
+                    <strong>Android Auto Integration</strong>
+                    Extends core metrics securely to your vehicle's dashboard display using standard Android Auto templates.
+                </li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>Project created and maintained by <a href="https://surendranb.com" target="_blank">surendranb.com</a></p>
+            <p>
+                <a href="https://github.com/surendranb/CarDash" target="_blank">GitHub Repository</a>
+                <span class="footer-sep">|</span>
+                <a href="https://github.com/surendranb/CarDash/blob/main/LICENSE" target="_blank">MIT License</a>
+            </p>
+        </div>
+    </footer>
 
 </body>
 </html>
