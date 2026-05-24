@@ -97,10 +97,14 @@ CarDash is available for internal testing via Google Play:
 
 ## 🔄 Project Roadmap
 
-### Recently Added (v2.3.1)
+### Recently Added (v2.3.3)
 - ✅ **Reactor V2 Architecture**: Stabilized data flow with a central `VehicleState` cache and asynchronous SQLite `VehicleLedger`.
 - ✅ **AI Agentic Queries**: LLM writes its own SQLite queries locally to answer complex historical diagnostic questions.
-- ✅ **Renault/Nissan Fuel Calibration**: Resolved issues with CMF-A+ generic OBD percentages by introducing manual multi-factor calibration.
+- ✅ **Renault/Nissan Fuel Calibration**: Resolved issues with CMF-A+ generic OBD percentages by introducing manual multi-factor calibration (e.g. 1.75 scaling factor).
+- ✅ **Fuel Multiplier AI Chip**: Added a preset assistant quick-action chip to calculate fuel multiplier easily.
+- ✅ **Graph & Axis Stabilization**: Resolved overlapping axis line rendering on trends graphs; added Y-axis sensor ranges and X-axis relative time markers.
+- ✅ **Streamlined Model Selection**: Replaced free-text selection with a standardized model dropdown selection (`gemini-flash-lite-latest`, `gemini-flash-latest`, and `gemini-pro-latest`) and helpful descriptions in Settings.
+- ✅ **OBD Reliability**: Fixed battery voltage returning zero by optimizing command queries (`AT RV`).
 
 ### Upcoming Frontiers
 - 🔄 **BigQuery Data Lake**: Export the Digital Clone Ledger seamlessly to a personal Google Cloud BigQuery instance for deep analytics and long-term storage across devices.
