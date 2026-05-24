@@ -121,8 +121,6 @@ fun MetricGridScreen(
                     baroPressure = baroPressure,
                     speedGps = speedGps,
                     gForceX = gForceX,
-                    gForceY = gForceY,
-                    gForceZ = gForceZ,
                     isConnected = isConnected
                 )
             }
@@ -401,8 +399,6 @@ fun PhoneMetricGrid(
     baroPressure: Int,
     speedGps: Int,
     gForceX: Float,
-    gForceY: Float,
-    gForceZ: Float,
     isConnected: Boolean
 ) {
     // Get engine state from the ViewModel

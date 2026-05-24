@@ -13,9 +13,9 @@
   
 </div>
 
-## 🚗 About CarDash
+## 🚗 About CarDash (Reactor V2)
 
-CarDash transforms your Android device into a powerful automotive dashboard, connecting to your vehicle's OBD-II port to provide real-time metrics and basic diagnostics. Whether you're a car enthusiast wanting to monitor your engine's vital statistics or a DIY mechanic diagnosing issues, CarDash offers an intuitive interface for viewing your vehicle's data.
+CarDash transforms your Android device into a powerful automotive dashboard, connecting to your vehicle's OBD-II port to provide real-time metrics and deep diagnostics. With the new **Reactor V2 Architecture**, CarDash now maintains a persistent "Digital Clone Ledger" of your vehicle's health and employs Google Gemini as an on-demand virtual mechanic.
 
 ## 🔒 Privacy First
 
@@ -25,14 +25,13 @@ CarDash is built with privacy as a core principle:
 * **No Data Collection** - We don't track, collect, or transmit your vehicle data
 * **No Analytics** - No usage tracking or analytics frameworks
 * **No Advertisements** - Zero ads or third-party tracking
-* **100% Local Storage** - All your data stays on your device
-* **No Internet Required** - Works completely offline after installation
+* **100% Local Storage** - Your Digital Clone Ledger stays on your device SQLite database
 
 Your vehicle data belongs to you alone. Period.
 
 <div align="center">
 
-|Real-time Metrics Dashboard|Settings & Configuration|
+|Real-time Metrics Dashboard|Digital AI Mechanic|
 |:-------------------------:|:----------------------:|
 |![Dashboard View](mockup_dashboard.png)|![Settings Screen](settings.png)|
 
@@ -44,26 +43,22 @@ Your vehicle data belongs to you alone. Period.
 * **Real-time Engine Stats**: RPM, speed, engine load, and throttle position
 * **Temperature Monitoring**: Coolant and intake air temperature
 * **System Status**: Fuel level, fuel pressure, barometric pressure, and battery voltage
-* **Customizable Layout**: Arrange metrics in your preferred dashboard configuration
+* **Android Auto Ready**: View key metrics securely on your vehicle's HUD while driving.
 
-### 🧠 AI Insights & Vehicle Profiles
-* **Gemini AI Analysis**: Get real-time health insights based on your engine data.
-* **Vehicle Context**: Save your car's Make and Model to help the AI provide manufacturer-specific diagnostic advice.
-* **Explainable Diagnostics**: Visual cues for metric thresholds (Green/Yellow/Red).
+### 🧠 Gemini AI Mechanic (Agentic vs Deterministic)
+* **Digital Clone Ledger**: CarDash logs 1-minute heartbeats of your vehicle's vital signs (RPM, voltages, thermal limits).
+* **Deterministic Analysis**: Fast, precise analytics via pre-computed logic (e.g., 7-day average strain, minimum voltage checks).
+* **Agentic Chat**: Ask your mechanic anything (e.g. "Did my engine overheat yesterday?"). The AI writes its own SQLite queries to analyze your ledger securely.
+* **Vehicle Context**: Save your car's Make and Model to get manufacturer-specific diagnostic advice.
 
-### 📈 Data Visualization
-* **Basic Graphs**: View trends of your vehicle's parameters
-* **Historical Data**: See how metrics change over time
+### 📈 Data Visualization & Calibration
+* **Advanced Trends**: Render beautiful graphs from your historical ledger using Compose Canvas.
+* **Hardware Calibrations**: Supports overriding OBD-II generic data (e.g. correcting Renault/Nissan CMF-A+ 70L nominal fuel gauge discrepancies).
 
 ### 🔧 Basic Diagnostics
 * **OBD-II Error Codes**: Read diagnostic trouble codes
 * **Log Viewer**: View basic communication logs with your vehicle's ECU
-* **Data Recording**: Save session data for later analysis
-
-### 📱 Modern Android Experience
-* **Material Design**: Clean, intuitive interface
-* **Jetpack Compose UI**: Responsive layouts for various screen sizes
-* **Tab-based Navigation**: Easy access to different functionality
+* **Offline-First**: Only the AI Mechanic explicitly requires an internet connection via the Gemini API token.
 
 ## 🛠️ Requirements
 
@@ -98,41 +93,24 @@ CarDash is available for internal testing via Google Play:
 - **Join the internal test group:** [Join here](https://play.google.com/apps/internaltest/4700669721171506027)
 - **Download the app:** [Direct Play Store link](https://play.google.com/apps/test/com.fuseforge.cardash/5)
 
-> **Note:** You must join the internal test group before you can download or update the app from the Play Store.
+> **Note:** You must join the internal test group before you can download or update the app from the Play Store. Using the Play Store is the most reliable way to ensure Android Auto visibility on modern devices.
 
 ## 🔄 Project Roadmap
 
-### Recently Added (v1.6.0)
-- ✅ **Vehicle Profiles**: Manufacturer-specific context for smarter AI analysis.
-- ✅ **Android Auto Integration**: View real-time metrics on your vehicle's HUD.
-- ✅ **Gemini AI Diagnostics**: Advanced engine health insights.
+### Recently Added (v2.3.1)
+- ✅ **Reactor V2 Architecture**: Stabilized data flow with a central `VehicleState` cache and asynchronous SQLite `VehicleLedger`.
+- ✅ **AI Agentic Queries**: LLM writes its own SQLite queries locally to answer complex historical diagnostic questions.
+- ✅ **Renault/Nissan Fuel Calibration**: Resolved issues with CMF-A+ generic OBD percentages by introducing manual multi-factor calibration.
 
-### Core Features
-- ✅ **Bluetooth OBD-II**: Seamless connection to standard ELM327 adapters.
-- ✅ **Custom Dashboard**: Arrange 10+ vital vehicle metrics to your liking.
-- ✅ **Historical Trends**: Graph visualization of engine data across trips.
-- ✅ **Offline-First**: All data is stored locally with absolute privacy.
-
-### Upcoming
-- 🔄 Enhanced DTC (Error Code) interpretation.
-- 🔄 Detailed trip logging and fuel economy analysis.
-- 🔄 Expanded manufacturer-specific OBD-II PID support.
+### Upcoming Frontiers
+- 🔄 **BigQuery Data Lake**: Export the Digital Clone Ledger seamlessly to a personal Google Cloud BigQuery instance for deep analytics and long-term storage across devices.
+- 🔄 Enhanced DTC (Error Code) interpretation using the Gemini model.
+- 🔄 Background service worker for continuous low-power logging.
 
 ### Known Limitations
 ⚠️ Fuel pressure readings may be unavailable on some vehicles  
 ⚠️ Battery voltage reading accuracy depends on OBD-II adapter quality  
-⚠️ Not all metrics are supported by all vehicles (manufacturer dependent)  
-⚠️ Performance may vary based on vehicle's OBD-II implementation  
 ⚠️ **Android Auto UI is currently single-column only (list view); grid or two-column layouts are not yet supported**  
-
-> **Note:** Android Auto UI may look different from the phone UI. See in-app for the latest appearance.
-
-## � Download & Internal Testing
-
-CarDash is available for internal testing via Google Play. Using the Play Store is the most reliable way to ensure Android Auto visibility on modern devices.
-
-- **Join the test group:** [Join here](https://play.google.com/apps/internaltest/4700669721171506027)
-- **Download the app:** [Direct Play Store link](https://play.google.com/apps/test/com.fuseforge.cardash/5)
 
 ---
 

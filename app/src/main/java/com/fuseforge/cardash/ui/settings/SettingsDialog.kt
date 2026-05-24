@@ -15,6 +15,7 @@ import com.fuseforge.cardash.data.preferences.AppPreferences
 import com.fuseforge.cardash.data.PreferencesManager
 import com.fuseforge.cardash.ui.metrics.MetricViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsDialog(
     tabSettings: TabSettings,
@@ -40,6 +41,7 @@ fun SettingsDialog(
     var aiInsightsEnabled by remember { mutableStateOf(prefsManager.isAiInsightsEnabled()) }
     var geminiApiKey by remember { mutableStateOf(prefsManager.getGeminiApiKey()) }
     var geminiModelName by remember { mutableStateOf(prefsManager.getGeminiModelName()) }
+    var fuelMultiplier by remember { mutableStateOf(prefsManager.getFuelMultiplier().toString()) }
     
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
@@ -132,7 +134,26 @@ fun SettingsDialog(
                 )
                 
                 Text(
-                    text = "Helps Gemini AI provide better insights for your specific car.",
+                    text = "Critical for accurate AI diagnostics. Helps Gemini interpret manufacturer-specific OBD-II Trouble Codes (DTC) and nominal sensor ranges.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+                )
+
+                OutlinedTextField(
+                    value = fuelMultiplier,
+                    onValueChange = { 
+                        fuelMultiplier = it
+                        it.toFloatOrNull()?.let { multiplier -> prefsManager.setFuelMultiplier(multiplier) }
+                    },
+                    label = { Text("Fuel Multiplier") },
+                    placeholder = { Text("e.g. 1.75") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                
+                Text(
+                    text = "Scales the OBD-II fuel percentage. Use this factor to calibrate your fuel display if the raw data provided by your vehicle's computer does not accurately represent your actual tank capacity.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
@@ -168,11 +189,17 @@ fun SettingsDialog(
                         geminiApiKey = it
                         prefsManager.setGeminiApiKey(it)
                     },
-                    label = { Text("Google AI Studio Token") },
+                    label = { Text("Gemini API Key") },
                     placeholder = { Text("AIza...") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                )
+                Text(
+                    text = "Your key stays securely on your device. Get one for free at aistudio.google.com",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
                 )
                 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -183,77 +210,41 @@ fun SettingsDialog(
                         geminiModelName = it
                         prefsManager.setGeminiModelName(it)
                     },
-                    label = { Text("LLM Model Target") },
-                    placeholder = { Text("e.g. gemma-4-31b-it") },
+                    label = { Text("Gemini Model Target") },
+                    placeholder = { Text("e.g. gemini-1.5-flash") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
                 
+                val models = listOf("gemini-flash-lite-latest", "gemini-flash-latest", "gemini-pro-latest")
+                
+                androidx.compose.foundation.lazy.LazyRow(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(models.size) { index ->
+                        val model = models[index]
+                        AssistChip(
+                            onClick = {
+                                geminiModelName = model
+                                prefsManager.setGeminiModelName(model)
+                            },
+                            label = { Text(model.replace("-latest", "").replace("gemini-", "")) }
+                        )
+                    }
+                }
+
+                Text(
+                    text = "Enter any valid model ID from Google AI Studio. Flash-Lite is fast; Pro is for deep diagnostics.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                /* 
                 // Reactor Engine: Cycles are now deterministic (2.5s) for AA Safety.
                 // Adjustable frequency is disabled to prevent Quota violations.
-                
-                // Data Collection Settings
-                Text(
-                    text = "Data Collection",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Verbose logging setting
-                TabSettingItem(
-                    tabName = "Verbose OBD Command Logging",
-                    checked = verboseLoggingState,
-                    enabled = true,
-                    onCheckedChange = { 
-                        verboseLoggingState = it
-                        metricViewModel.toggleVerboseLogging(it)
-                    }
-                )
-                
-                // Data collection frequency
-                Text(
-                    text = "Data Collection Cycle: ${dataCollectionFrequency / 1000}s",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-                
-                Slider(
-                    value = dataCollectionFrequency.toFloat(),
-                    onValueChange = { dataCollectionFrequency = it.toInt() },
-                    onValueChangeFinished = {
-                        metricViewModel.setDataCollectionFrequency(dataCollectionFrequency)
-                    },
-                    valueRange = 1000f..10000f,
-                    steps = 8,
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
-                
-                // Storage frequency
-                Text(
-                    text = "Database Write Interval: ${storageFrequency / 1000}s",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-                
-                Slider(
-                    value = storageFrequency.toFloat(),
-                    onValueChange = { storageFrequency = it.toInt() },
-                    onValueChangeFinished = {
-                        metricViewModel.setStorageFrequency(storageFrequency)
-                    },
-                    valueRange = 3000f..30000f,
-                    steps = 8,
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Divider()
-                */
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 

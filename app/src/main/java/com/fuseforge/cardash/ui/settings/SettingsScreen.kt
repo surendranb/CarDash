@@ -12,6 +12,7 @@ import com.fuseforge.cardash.data.PreferencesManager
 import com.fuseforge.cardash.ui.theme.Error
 import com.fuseforge.cardash.ui.theme.Success
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen() {
     val context = LocalContext.current
@@ -55,7 +56,7 @@ fun SettingsScreen() {
                 )
             )
             Text(
-                text = "Helps AI provide engine-specific diagnostics.",
+                text = "Critical for accurate AI diagnostics. Helps Gemini interpret manufacturer-specific OBD-II Trouble Codes (DTC) and nominal sensor ranges.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 8.dp)
@@ -88,7 +89,7 @@ fun SettingsScreen() {
                 )
             )
             Text(
-                text = "Scales the OBD-II reported fuel percentage. For example, Renault CMF-A+ cars (Kiger, Triber, Magnite) use a 70L ECU nominal capacity baseline but physically have a 40L/35L tank. Set this to 1.75 (or 2.0) to correct the gauge display.",
+                text = "Scales the OBD-II fuel percentage. For example, if your car's ECU reports a 70L tank but you physically have a 40L tank, set this to 1.75 to correct the gauge display.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 8.dp)
@@ -132,7 +133,7 @@ fun SettingsScreen() {
                         geminiApiKey = it
                         prefsManager.setGeminiApiKey(it)
                     },
-                    label = { Text("Google AI API Key") },
+                    label = { Text("Gemini API Key") },
                     modifier = Modifier.fillMaxWidth(),
                     visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -140,14 +141,20 @@ fun SettingsScreen() {
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     )
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Your key stays securely on your device. Get one for free at aistudio.google.com",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
+                )
+                
                 OutlinedTextField(
                     value = geminiModelName,
                     onValueChange = { 
                         geminiModelName = it
                         prefsManager.setGeminiModelName(it)
                     },
-                    label = { Text("Gemini Model") },
+                    label = { Text("Gemini Model Target") },
                     placeholder = { Text("e.g. gemini-1.5-flash") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -155,6 +162,31 @@ fun SettingsScreen() {
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     )
+                )
+                
+                val models = listOf("gemini-flash-lite-latest", "gemini-flash-latest", "gemini-pro-latest")
+                
+                androidx.compose.foundation.lazy.LazyRow(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(models.size) { index ->
+                        val model = models[index]
+                        AssistChip(
+                            onClick = {
+                                geminiModelName = model
+                                prefsManager.setGeminiModelName(model)
+                            },
+                            label = { Text(model.replace("-latest", "").replace("gemini-", "")) }
+                        )
+                    }
+                }
+
+                Text(
+                    text = "Enter any valid model ID from Google AI Studio. Flash-Lite is fast; Pro is for deep diagnostics.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
                 )
             }
         }
@@ -170,10 +202,10 @@ fun SettingsScreen() {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("About CarDash", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Version 2.2.1 (Reactor V2)", style = MaterialTheme.typography.bodySmall)
+                    Text("Version ${com.fuseforge.cardash.BuildConfig.VERSION_NAME} (Reactor V2)", style = MaterialTheme.typography.bodySmall)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "Designed for high-fidelity vehicle monitoring. All telemetry data is stored locally. AI insights are processed via Google Gemini.",
+                        "AI powered insights for your vehicle.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

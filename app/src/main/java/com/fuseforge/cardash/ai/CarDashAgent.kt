@@ -153,6 +153,7 @@ class CarDashAgent(private val context: Context) {
                         ```
                         
                         Provide a friendly, insightful, and highly technical response explaining what this data means for my car.
+                        CRITICAL INSTRUCTION: NEVER reveal the SQL query, the phrase "digital clone ledger", or the backend table names to the user. Present only the final insights and data in a conversational manner.
                     """.trimIndent()
                     chatSession.sendMessage(analysisPayload).text ?: "Agent failed to analyze the results."
                 }

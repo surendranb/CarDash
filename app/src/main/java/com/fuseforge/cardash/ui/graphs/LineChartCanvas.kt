@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.nativeCanvas
 import kotlin.math.roundToInt
 
 @Composable
@@ -125,7 +126,7 @@ fun LineChartCanvas(
         val numVerticalLines = 5
         
         // Horizontal grid lines
-        for (i in 1 until numHorizontalLines) {
+        for (i in 0..numHorizontalLines) {
             val y = height - (height * i / numHorizontalLines)
             drawLine(
                 color = Color.Gray.copy(alpha = 0.3f),
@@ -136,12 +137,19 @@ fun LineChartCanvas(
             
             // Draw value markers
             val value = minValue + (i.toFloat() / numHorizontalLines) * valueRange
-            // Skip text drawing for now as it requires nativeCanvas access
-            // which may not be available in all compose implementations
+            drawContext.canvas.nativeCanvas.drawText(
+                String.format("%.1f", value),
+                10f,
+                y - 10f,
+                android.graphics.Paint().apply {
+                    color = android.graphics.Color.GRAY
+                    textSize = 30f
+                }
+            )
         }
         
         // Vertical grid lines
-        for (i in 1 until numVerticalLines) {
+        for (i in 0..numVerticalLines) {
             val x = width * i / numVerticalLines
             drawLine(
                 color = Color.Gray.copy(alpha = 0.3f),
@@ -149,6 +157,24 @@ fun LineChartCanvas(
                 end = Offset(x, height),
                 strokeWidth = 0.5f
             )
+            
+            // Draw time markers
+            if (i > 0) {
+                val timeFraction = 1.0 - (i.toDouble() / numVerticalLines)
+                val timeOffsetMillis = (timeRange * timeFraction).toLong()
+                val minutesAgo = timeOffsetMillis / 60000
+                
+                val label = if (minutesAgo == 0L) "Now" else "-${minutesAgo}m"
+                drawContext.canvas.nativeCanvas.drawText(
+                    label,
+                    x - 20f,
+                    height - 10f,
+                    android.graphics.Paint().apply {
+                        color = android.graphics.Color.GRAY
+                        textSize = 30f
+                    }
+                )
+            }
         }
     }
 }

@@ -31,9 +31,6 @@ abstract class AppDatabase : RoomDatabase() {
         private var INSTANCE: AppDatabase? = null
         
         fun getDatabase(context: Context): AppDatabase {
-            // Pre-migration backup for Architecture v2.0 safety
-            DatabaseBackup.backupDatabase(context)
-
             // If INSTANCE is not null, return it
             // If it is null, create the database
             return INSTANCE ?: synchronized(this) {
