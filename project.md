@@ -25,6 +25,14 @@ CarDash is a "Safety-First" automotive dashboard that transforms Android devices
     - **Cmd**: `export JAVA_HOME=/opt/homebrew/opt/openjdk@17 && export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools && ./gradlew bundleRelease`
 
 ## 📂 Project Geography (Sources of Truth)
+
+### 🤝 Multica Collaboration Protocol
+The Multica dashboard (`http://localhost:3010`) is the **absolute authority** for tasks, bugs, and release roadmaps. In-repo tracking files (like wishlists) are strictly prohibited. We follow these 4 pillars:
+1. **Outcome-Oriented Epics:** Parent issues define the *Business/User Outcome* (the "Why"), not just the technical feature.
+2. **The Delivery Pipeline:** Epics are broken down into Sub-Issues representing the "How". Sub-Issues explicitly declare ownership prefixes (`[Agent]` or `[User]`).
+3. **Mandatory Verification:** An issue is never closed until a designated `[User] Verify...` or `[Agent] Verify...` sub-issue is signed off.
+4. **Agent State-Machine Enforcement:** The Agent must proactively mutate issue status (`todo` -> `in_progress` -> `done`) as the pipeline executes.
+
 - `app/src/main/java/com/fuseforge/cardash/services/obd/`: 
     - `OBDLink.kt`: Low-level stateless byte reactor.
     - `Telemetrist.kt`: Orchestrator & State Machine (HUD Source).

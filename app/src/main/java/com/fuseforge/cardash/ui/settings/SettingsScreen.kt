@@ -11,6 +11,16 @@ import androidx.compose.ui.unit.dp
 import com.fuseforge.cardash.data.PreferencesManager
 import com.fuseforge.cardash.ui.theme.Error
 import com.fuseforge.cardash.ui.theme.Success
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileInputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,6 +33,50 @@ fun SettingsScreen() {
     var geminiApiKey by remember { mutableStateOf(prefsManager.getGeminiApiKey()) }
     var geminiModelName by remember { mutableStateOf(prefsManager.getGeminiModelName()) }
     var fuelMultiplier by remember { mutableStateOf(prefsManager.getFuelMultiplier().toString()) }
+
+    val scope = rememberCoroutineScope()
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                            ZipOutputStream(outputStream).use { zos ->
+                                val dbFiles = listOf(
+                                    context.getDatabasePath("car_dash_database"),
+                                    context.getDatabasePath("car_dash_database-shm"),
+                                    context.getDatabasePath("car_dash_database-wal")
+                                )
+                                dbFiles.forEach { dbFile ->
+                                    if (dbFile.exists()) {
+                                        zos.putNextEntry(ZipEntry(dbFile.name))
+                                        FileInputStream(dbFile).use { it.copyTo(zos) }
+                                        zos.closeEntry()
+                                    }
+                                }
+                                val prefsFiles = listOf(
+                                    File(context.applicationInfo.dataDir, "shared_prefs/CarDashPrefs.xml"),
+                                    File(context.filesDir, "datastore/settings.preferences_pb")
+                                )
+                                prefsFiles.forEach { prefsFile ->
+                                    if (prefsFile.exists()) {
+                                        zos.putNextEntry(ZipEntry(prefsFile.name))
+                                        FileInputStream(prefsFile).use { it.copyTo(zos) }
+                                        zos.closeEntry()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Toast.makeText(context, "Export successful", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -189,6 +243,30 @@ fun SettingsScreen() {
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
+        }
+
+        item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
+
+        // Data Management
+        item {
+            Text(
+                text = "Data Management",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = { exportLauncher.launch("cardash_export_${System.currentTimeMillis()}.zip") },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Export App Data (ZIP)")
+            }
+            Text(
+                text = "Export your telemetry database and AI chat history.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
 
         item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }

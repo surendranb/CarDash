@@ -127,4 +127,10 @@ interface OBDLogDao {
 
     @Query("SELECT * FROM vehicle_heartbeats ORDER BY timestamp DESC LIMIT :limit")
     suspend fun getRecentHeartbeatsInstant(limit: Int = 100): List<VehicleHeartbeat>
+
+    @Query("SELECT SUM(avgSpeed * activeSeconds / 3600.0) FROM vehicle_heartbeats")
+    fun getTotalDistanceFlow(): Flow<Double?>
+    
+    @Query("SELECT * FROM vehicle_heartbeats ORDER BY timestamp ASC")
+    fun getAllHeartbeatsFlow(): Flow<List<VehicleHeartbeat>>
 }
