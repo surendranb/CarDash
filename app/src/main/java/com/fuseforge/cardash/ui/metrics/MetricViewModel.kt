@@ -80,6 +80,12 @@ class MetricViewModel(context: Context) : ViewModel() {
     private val _fuelLevelHistory = MutableStateFlow<List<Int>>(emptyList())
     val fuelLevelHistory = _fuelLevelHistory.asStateFlow()
     
+    private val _totalDistance = MutableStateFlow(0.0)
+    val totalDistance = _totalDistance.asStateFlow()
+    
+    private val _totalFuelConsumed = MutableStateFlow(0.0)
+    val totalFuelConsumed = _totalFuelConsumed.asStateFlow()
+    
     private val _errorMessage = MutableSharedFlow<String>()
     val errorMessage = _errorMessage.asSharedFlow()
     
@@ -115,6 +121,41 @@ class MetricViewModel(context: Context) : ViewModel() {
                 _gForceX.value = state.gForceX
                 _gForceY.value = state.gForceY
                 _gForceZ.value = state.gForceZ
+            }
+            .launchIn(viewModelScope)
+            
+        // Observe cumulative metrics from DB
+        val dao = AppDatabase.getDatabase(context).obdLogDao()
+        
+        dao.getTotalDistanceFlow()
+            .onEach { distance ->
+                if (distance != null) {
+                    _totalDistance.value = distance
+                }
+            }
+            .launchIn(viewModelScope)
+            
+        dao.getAllHeartbeatsFlow()
+            .onEach { heartbeats ->
+                var totalFuel = 0.0
+                var currentFuel = -1
+                
+                for (heartbeat in heartbeats) {
+                    val fuel = heartbeat.fuelLevel ?: continue
+                    if (currentFuel == -1) {
+                        currentFuel = fuel
+                        continue
+                    }
+                    
+                    val drop = currentFuel - fuel
+                    if (drop > 0) {
+                        // Using the 0.4L per 1% drop formula established in SUR-62
+                        totalFuel += drop * 0.4
+                    }
+                    currentFuel = fuel
+                }
+                
+                _totalFuelConsumed.value = totalFuel
             }
             .launchIn(viewModelScope)
     }

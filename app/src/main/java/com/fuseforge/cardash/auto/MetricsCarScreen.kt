@@ -20,6 +20,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import java.util.Locale
+import com.fuseforge.cardash.data.db.AppDatabase
 
 class MetricsCarScreen(carContext: CarContext) : Screen(carContext) {
     private var telemetrist: Telemetrist? = null
@@ -34,6 +35,9 @@ class MetricsCarScreen(carContext: CarContext) : Screen(carContext) {
     private var row1Text = "--"
     private var row2Text = "--"
     private var row3Text = "--"
+    
+    private var lifetimeDist = 0.0
+    private var lifetimeFuel = 0.0
 
     init {
         val app = carContext.applicationContext as CarDashApp
@@ -44,6 +48,36 @@ class MetricsCarScreen(carContext: CarContext) : Screen(carContext) {
             override fun onStart(owner: LifecycleOwner) {
                 super.onStart(owner)
                 metricsUpdateJob?.cancel()
+
+                val dao = AppDatabase.getDatabase(carContext).obdLogDao()
+                
+                dao.getTotalDistanceFlow()
+                    .onEach { dist -> 
+                        if (dist != null) {
+                            lifetimeDist = dist
+                            invalidate()
+                        }
+                    }
+                    .launchIn(lifecycleScope)
+                    
+                dao.getAllHeartbeatsFlow()
+                    .onEach { heartbeats ->
+                        var totalFuel = 0.0
+                        var currentFuel = -1
+                        for (heartbeat in heartbeats) {
+                            val fuel = heartbeat.fuelLevel ?: continue
+                            if (currentFuel == -1) {
+                                currentFuel = fuel
+                                continue
+                            }
+                            val drop = currentFuel - fuel
+                            if (drop > 0) totalFuel += drop * 0.4
+                            currentFuel = fuel
+                        }
+                        lifetimeFuel = totalFuel
+                        invalidate()
+                    }
+                    .launchIn(lifecycleScope)
 
                 telemetrist?.let { reactor ->
                     metricsUpdateJob = reactor.state.onEach { state ->
@@ -92,6 +126,10 @@ class MetricsCarScreen(carContext: CarContext) : Screen(carContext) {
         addListRow(itemListBuilder, "ENGINE", row1Text)
         addListRow(itemListBuilder, "THERMALS", row2Text)
         addListRow(itemListBuilder, "SYSTEM", row3Text)
+        
+        val efficiency = if (lifetimeFuel > 0) lifetimeDist / lifetimeFuel else 0.0
+        val row4Text = String.format(Locale.US, "Dist: %.1f km | Fuel: %.1f L | Eff: %.1f km/L", lifetimeDist, lifetimeFuel, efficiency)
+        addListRow(itemListBuilder, "LIFETIME", row4Text)
 
         // Root screens must use APP_ICON to pass Android Auto driving UX restrictions
         val headerAction = Action.APP_ICON

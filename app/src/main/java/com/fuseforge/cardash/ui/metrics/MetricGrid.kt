@@ -48,6 +48,9 @@ fun MetricGridScreen(
     val gForceY by viewModel.gForceY.collectAsState()
     val gForceZ by viewModel.gForceZ.collectAsState()
     
+    val totalDistance by viewModel.totalDistance.collectAsState()
+    val totalFuelConsumed by viewModel.totalFuelConsumed.collectAsState()
+    
     // New metric values - simplified
     // We're not using these for now
     // val averageSpeed by viewModel.averageSpeed.collectAsState()
@@ -90,6 +93,8 @@ fun MetricGridScreen(
             if (isTablet) {
                 // Tablet layout - optimize for a 10-inch screen
                 TabletMetricGrid(
+                    totalDistance = totalDistance,
+                    totalFuelConsumed = totalFuelConsumed,
                     rpm = rpm,
                     speed = speed,
                     engineLoad = engineLoad,
@@ -109,6 +114,8 @@ fun MetricGridScreen(
             } else {
                 // Phone layout - scrollable
                 PhoneMetricGrid(
+                    totalDistance = totalDistance,
+                    totalFuelConsumed = totalFuelConsumed,
                     rpm = rpm,
                     speed = speed,
                     engineLoad = engineLoad,
@@ -130,6 +137,8 @@ fun MetricGridScreen(
 
 @Composable
 fun TabletMetricGrid(
+    totalDistance: Double,
+    totalFuelConsumed: Double,
     rpm: Int,
     speed: Int,
     engineLoad: Int,
@@ -166,6 +175,42 @@ fun TabletMetricGrid(
                 isConnected = isConnected
             )
         }
+        
+        // Lifetime metrics row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            MetricCard(
+                title = "DISTANCE",
+                value = String.format("%.1f", totalDistance),
+                unit = "km",
+                status = MetricStatus.GOOD,
+                isConnected = isConnected,
+                modifier = Modifier.weight(1f)
+            )
+            
+            MetricCard(
+                title = "FUEL USED",
+                value = String.format("%.1f", totalFuelConsumed),
+                unit = "L",
+                status = MetricStatus.GOOD,
+                isConnected = isConnected,
+                modifier = Modifier.weight(1f)
+            )
+            
+            val efficiency = if (totalFuelConsumed > 0) totalDistance / totalFuelConsumed else 0.0
+            MetricCard(
+                title = "EFFICIENCY",
+                value = String.format("%.1f", efficiency),
+                unit = "km/L",
+                status = MetricStatus.GOOD,
+                isConnected = isConnected,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
         
         // Top row - Primary metrics (3 columns)
         Row(
@@ -387,6 +432,8 @@ fun TabletMetricGrid(
 
 @Composable
 fun PhoneMetricGrid(
+    totalDistance: Double,
+    totalFuelConsumed: Double,
     rpm: Int,
     speed: Int,
     engineLoad: Int,
@@ -422,6 +469,42 @@ fun PhoneMetricGrid(
                 isConnected = isConnected
             )
         }
+        
+        // Lifetime metrics row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            MetricCard(
+                title = "DISTANCE",
+                value = String.format("%.1f", totalDistance),
+                unit = "km",
+                status = MetricStatus.GOOD,
+                isConnected = isConnected,
+                modifier = Modifier.weight(1f)
+            )
+            
+            MetricCard(
+                title = "FUEL USED",
+                value = String.format("%.1f", totalFuelConsumed),
+                unit = "L",
+                status = MetricStatus.GOOD,
+                isConnected = isConnected,
+                modifier = Modifier.weight(1f)
+            )
+            
+            val efficiency = if (totalFuelConsumed > 0) totalDistance / totalFuelConsumed else 0.0
+            MetricCard(
+                title = "EFFICIENCY",
+                value = String.format("%.1f", efficiency),
+                unit = "km/L",
+                status = MetricStatus.GOOD,
+                isConnected = isConnected,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
         
         // Primary metrics row (RPM and Speed)
         Row(

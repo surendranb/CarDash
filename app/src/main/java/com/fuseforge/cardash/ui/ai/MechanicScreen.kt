@@ -5,6 +5,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
@@ -48,6 +49,17 @@ fun MechanicScreen() {
         } catch (e: Exception) { emptyList<ChatMessage>() })
     }
     var isThinking by remember { mutableStateOf(false) }
+    
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(chatHistory.size, isThinking) {
+        if (chatHistory.isNotEmpty()) {
+            val targetIndex = chatHistory.size + if (isThinking) 1 else 0
+            if (targetIndex > 0) {
+                listState.animateScrollToItem(targetIndex - 1)
+            }
+        }
+    }
 
     fun saveHistory(history: List<ChatMessage>) {
         val array = JSONArray()
@@ -132,6 +144,7 @@ fun MechanicScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .imePadding()
             .padding(16.dp)
     ) {
         Text(
@@ -190,6 +203,7 @@ fun MechanicScreen() {
 
         // Chat History
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
