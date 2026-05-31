@@ -89,16 +89,28 @@ fun LineChartCanvas(
         val points = dataPoints.map { point ->
             val x = graphPaddingLeft + ((point.timestamp.time - minTimestamp) / timeRange.toFloat() * width).toFloat()
             val y = (height - ((point.value - minValue) / valueRange * height)).toFloat()
-            Offset(x, y)
+            Pair(point, Offset(x, y))
         }
         
         // Draw the line connecting points
         if (points.size > 1) {
             // Create a path for the line
             val path = Path().apply {
-                moveTo(points.first().x, points.first().y)
-                points.drop(1).forEach { point ->
-                    lineTo(point.x, point.y)
+                moveTo(points.first().second.x, points.first().second.y)
+                
+                var prevPoint = points.first().first
+                
+                points.drop(1).forEach { (data, offset) ->
+                    val timeDiff = data.timestamp.time - prevPoint.timestamp.time
+                    
+                    // Break the line if there's a >5 min gap (e.g. engine was turned off)
+                    if (timeDiff > 300_000L) {
+                        moveTo(offset.x, offset.y)
+                    } else {
+                        lineTo(offset.x, offset.y)
+                    }
+                    
+                    prevPoint = data
                 }
             }
             
@@ -114,11 +126,11 @@ fun LineChartCanvas(
             )
             
             // Draw points
-            points.forEach { point ->
+            points.forEach { (_, offset) ->
                 drawCircle(
                     color = lineColor,
                     radius = 4f,
-                    center = point
+                    center = offset
                 )
             }
         }

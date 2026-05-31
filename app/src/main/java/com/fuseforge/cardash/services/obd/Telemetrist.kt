@@ -132,6 +132,7 @@ class Telemetrist(
 
     private suspend fun runTelemetryLoop(link: OBDLink) {
         updateStatus(TelemetryStatus.ACTIVE)
+        var stallStartTime = 0L
         while (link.isConnected()) {
             yield() // Check for cancellation
             val startTime = System.currentTimeMillis()
@@ -147,6 +148,8 @@ class Telemetrist(
                 val (pid, mapper) = ancillaryPids[ancillaryIndex]
                 newState = mapper(newState, link.query(pid))
                 ancillaryIndex = (ancillaryIndex + 1) % ancillaryPids.size
+                
+                stallStartTime = 0L // Reset stall timer on success
 
                 newState = newState.copy(
                     isEngineRunning = newState.rpm > 200,
@@ -157,6 +160,14 @@ class Telemetrist(
 
             } catch (e: Exception) {
                 if (!link.isConnected()) throw e
+                
+                if (stallStartTime == 0L) {
+                    stallStartTime = System.currentTimeMillis()
+                } else if (System.currentTimeMillis() - stallStartTime > 120_000L) {
+                    link.close() // Force the socket to close
+                    throw Exception("Connection stalled for over 2 minutes. Forcing disconnect to split trip.")
+                }
+                
                 _state.emit(newState.copy(connectionStatus = TelemetryStatus.STALLED))
             }
 
