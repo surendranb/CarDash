@@ -37,6 +37,14 @@ android {
         }
     }
 
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/INDEX.LIST"
+            excludes += "META-INF/DEPENDENCIES"
+        }
+    }
+
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
@@ -108,6 +116,10 @@ dependencies {
     
     // OBD-Java-API for OBD2 communication
     implementation("com.github.eltonvs:kotlin-obd-api:1.3.0")
+    
+    // BigQuery BYOK integration
+    implementation("com.google.auth:google-auth-library-oauth2-http:1.23.0")
+    implementation("com.google.code.gson:gson:2.10.1")
     
     // Testing
     testImplementation("junit:junit:4.13.2")

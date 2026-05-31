@@ -23,6 +23,9 @@ private const val KEY_GEMINI_MODEL_NAME = "gemini_model_name"
 private const val KEY_AI_INSIGHTS_ENABLED = "ai_insights_enabled"
 private const val KEY_ODOMETER_OFFSET = "odometer_offset"
 private const val KEY_FUEL_MULTIPLIER = "fuel_multiplier"
+private const val KEY_BQ_SERVICE_ACCOUNT_JSON = "bq_service_account_json"
+private const val KEY_BQ_DATASET_ID = "bq_dataset_id"
+private const val KEY_BQ_TABLE_ID = "bq_table_id"
 
 class PreferencesManager(private val context: Context) {
     
@@ -169,6 +172,30 @@ class PreferencesManager(private val context: Context) {
 
     fun setFuelMultiplier(multiplier: Float) {
         preferences.edit().putFloat(KEY_FUEL_MULTIPLIER, multiplier).apply()
+    }
+
+    fun getBqServiceAccountJson(): String {
+        return preferences.getString(KEY_BQ_SERVICE_ACCOUNT_JSON, "") ?: ""
+    }
+
+    fun setBqServiceAccountJson(json: String) {
+        preferences.edit().putString(KEY_BQ_SERVICE_ACCOUNT_JSON, json).apply()
+    }
+
+    fun getBqDatasetId(): String {
+        return preferences.getString(KEY_BQ_DATASET_ID, "cardash_telemetry") ?: "cardash_telemetry"
+    }
+
+    fun setBqDatasetId(id: String) {
+        preferences.edit().putString(KEY_BQ_DATASET_ID, id).apply()
+    }
+
+    fun getBqTableId(): String {
+        return preferences.getString(KEY_BQ_TABLE_ID, "vehicle_heartbeats") ?: "vehicle_heartbeats"
+    }
+
+    fun setBqTableId(id: String) {
+        preferences.edit().putString(KEY_BQ_TABLE_ID, id).apply()
     }
 
     // Add other preference methods below as needed

@@ -3,8 +3,10 @@ package com.fuseforge.cardash.services.obd
 import android.util.Log
 import com.fuseforge.cardash.data.db.AppDatabase
 import com.fuseforge.cardash.data.db.VehicleHeartbeat
+import com.fuseforge.cardash.data.PreferencesManager
 import com.fuseforge.cardash.model.TelemetryStatus
 import com.fuseforge.cardash.model.VehicleState
+import com.fuseforge.cardash.services.cloud.BigQuerySyncer
 import kotlinx.coroutines.*
 import java.util.*
 
@@ -15,6 +17,7 @@ import java.util.*
 class VehicleLedger(
     private val database: AppDatabase,
     private val telemetrist: Telemetrist,
+    private val prefsManager: PreferencesManager,
     private val scope: CoroutineScope
 ) {
     private val TAG = "VehicleLedger"
@@ -128,6 +131,17 @@ class VehicleLedger(
             try {
                 database.obdLogDao().insertHeartbeat(heartbeat)
                 Log.i(TAG, "Heartbeat Committed: ${elapsedSeconds}s active, ${idlingSeconds}s idling.")
+                
+                // Stream to BigQuery if configured
+                val bqJson = prefsManager.getBqServiceAccountJson()
+                if (bqJson.isNotBlank()) {
+                    val datasetId = prefsManager.getBqDatasetId()
+                    val tableId = prefsManager.getBqTableId()
+                    val syncer = BigQuerySyncer(bqJson, datasetId, tableId)
+                    // Fire and forget so we don't block ledger
+                    launch(Dispatchers.IO) { syncer.streamRow(heartbeat) }
+                }
+                Unit
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to commit: ${e.message}")
             }

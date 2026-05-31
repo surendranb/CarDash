@@ -47,7 +47,7 @@ class CarDashApp : Application() {
     }
 
     val vehicleLedger: VehicleLedger by lazy {
-        VehicleLedger(database, telemetrist, applicationScope)
+        VehicleLedger(database, telemetrist, preferencesManager, applicationScope)
     }
     
     override fun onCreate() {

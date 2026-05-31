@@ -33,6 +33,9 @@ fun SettingsScreen() {
     var geminiApiKey by remember { mutableStateOf(prefsManager.getGeminiApiKey()) }
     var geminiModelName by remember { mutableStateOf(prefsManager.getGeminiModelName()) }
     var fuelMultiplier by remember { mutableStateOf(prefsManager.getFuelMultiplier().toString()) }
+    var bqDatasetId by remember { mutableStateOf(prefsManager.getBqDatasetId()) }
+    var bqTableId by remember { mutableStateOf(prefsManager.getBqTableId()) }
+    var bqServiceAccountJson by remember { mutableStateOf(prefsManager.getBqServiceAccountJson()) }
 
     val scope = rememberCoroutineScope()
     val exportLauncher = rememberLauncherForActivityResult(
@@ -73,6 +76,29 @@ fun SettingsScreen() {
                     Toast.makeText(context, "Export successful", Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
                     Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    val bqJsonLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    val content = withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
+                    }
+                    if (content != null && content.contains("private_key")) {
+                        bqServiceAccountJson = content
+                        prefsManager.setBqServiceAccountJson(content)
+                        Toast.makeText(context, "Service Account Loaded!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Invalid JSON key file", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Failed to read file", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -267,6 +293,61 @@ fun SettingsScreen() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp)
             )
+        }
+
+        item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
+
+        // BigQuery BYOK
+        item {
+            Text(
+                text = "BigQuery Live Telemetry",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = bqDatasetId,
+                onValueChange = { 
+                    bqDatasetId = it
+                    prefsManager.setBqDatasetId(it)
+                },
+                label = { Text("Dataset ID") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = bqTableId,
+                onValueChange = { 
+                    bqTableId = it
+                    prefsManager.setBqTableId(it)
+                },
+                label = { Text("Table ID") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = { bqJsonLauncher.launch(arrayOf("application/json", "*/*")) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (bqServiceAccountJson.isNotBlank()) "Update Service Account JSON" else "Load Service Account JSON")
+            }
+            if (bqServiceAccountJson.isNotBlank()) {
+                Text(
+                    text = "Service Account Key loaded.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Success,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            } else {
+                Text(
+                    text = "Load a GCP Service Account JSON with BigQuery Data Editor permissions to stream telemetry.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
         }
 
         item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
