@@ -6,15 +6,19 @@ import com.fuseforge.cardash.data.db.VehicleHeartbeat
 import com.fuseforge.cardash.data.PreferencesManager
 import com.fuseforge.cardash.model.TelemetryStatus
 import com.fuseforge.cardash.model.VehicleState
-import com.fuseforge.cardash.services.cloud.BigQuerySyncer
+import com.fuseforge.cardash.services.cloud.BigQuerySyncWorker
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import kotlinx.coroutines.*
 import java.util.*
+import android.content.Context
 
 /**
  * The Ledger is responsible for turning the 'Live Pulse' of the vehicle
  * into 'Ground Truth' history. It aggregates 1-second states into 1-minute blocks.
  */
 class VehicleLedger(
+    private val context: Context,
     private val database: AppDatabase,
     private val telemetrist: Telemetrist,
     private val prefsManager: PreferencesManager,
@@ -131,15 +135,11 @@ class VehicleLedger(
             try {
                 database.obdLogDao().insertHeartbeat(heartbeat)
                 Log.i(TAG, "Heartbeat Committed: ${elapsedSeconds}s active, ${idlingSeconds}s idling.")
-                
-                // Stream to BigQuery if configured
+                // Trigger Sync Worker if in REALTIME mode
                 val bqJson = prefsManager.getBqServiceAccountJson()
-                if (bqJson.isNotBlank()) {
-                    val datasetId = prefsManager.getBqDatasetId()
-                    val tableId = prefsManager.getBqTableId()
-                    val syncer = BigQuerySyncer(bqJson, datasetId, tableId)
-                    // Fire and forget so we don't block ledger
-                    launch(Dispatchers.IO) { syncer.streamRow(heartbeat) }
+                if (bqJson.isNotBlank() && prefsManager.getBqSyncMode() == "REALTIME") {
+                    val request = OneTimeWorkRequestBuilder<BigQuerySyncWorker>().build()
+                    WorkManager.getInstance(context).enqueue(request)
                 }
                 Unit
             } catch (e: Exception) {

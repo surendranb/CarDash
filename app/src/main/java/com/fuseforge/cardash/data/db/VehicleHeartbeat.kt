@@ -40,5 +40,8 @@ data class VehicleHeartbeat(
     // Derived City Metrics (Calculated by the aggregator)
     val activeSeconds: Int = 60, // How many seconds in this minute the pulse was active
     val idlingSeconds: Int = 0, // How many of those were at 0 speed
-    val incidentCount: Int = 0  // Number of anomalies detected in this window
+    val incidentCount: Int = 0,  // Number of anomalies detected in this window
+
+    // Sync State
+    val isSynced: Boolean = false // Whether this heartbeat has been synced to BigQuery
 )

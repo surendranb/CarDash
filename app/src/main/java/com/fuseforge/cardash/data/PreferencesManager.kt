@@ -26,6 +26,8 @@ private const val KEY_FUEL_MULTIPLIER = "fuel_multiplier"
 private const val KEY_BQ_SERVICE_ACCOUNT_JSON = "bq_service_account_json"
 private const val KEY_BQ_DATASET_ID = "bq_dataset_id"
 private const val KEY_BQ_TABLE_ID = "bq_table_id"
+private const val KEY_BQ_SYNC_MODE = "bq_sync_mode"
+private const val KEY_BQ_LAST_SYNC_TIME = "bq_last_sync_time"
 
 class PreferencesManager(private val context: Context) {
     
@@ -196,6 +198,22 @@ class PreferencesManager(private val context: Context) {
 
     fun setBqTableId(id: String) {
         preferences.edit().putString(KEY_BQ_TABLE_ID, id).apply()
+    }
+
+    fun getBqSyncMode(): String {
+        return preferences.getString(KEY_BQ_SYNC_MODE, "REALTIME") ?: "REALTIME"
+    }
+
+    fun setBqSyncMode(mode: String) {
+        preferences.edit().putString(KEY_BQ_SYNC_MODE, mode).apply()
+    }
+
+    fun getLastSyncTime(): Long {
+        return preferences.getLong(KEY_BQ_LAST_SYNC_TIME, 0L)
+    }
+
+    fun setLastSyncTime(timestamp: Long) {
+        preferences.edit().putLong(KEY_BQ_LAST_SYNC_TIME, timestamp).apply()
     }
 
     // Add other preference methods below as needed

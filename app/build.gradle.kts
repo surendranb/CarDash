@@ -12,8 +12,8 @@ android {
         applicationId = "com.fuseforge.cardash"
         minSdk = 26
         targetSdk = 35
-        versionCode = 43
-        versionName = "2.3.8"
+        versionCode = 44
+        versionName = "2.3.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
@@ -104,6 +104,9 @@ dependencies {
     
     // DataStore preferences
     implementation(libs.androidx.datastore.preferences)
+    
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
     
     // Android Auto
     implementation(libs.androidx.car.app)

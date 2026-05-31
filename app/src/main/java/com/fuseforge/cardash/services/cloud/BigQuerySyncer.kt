@@ -48,19 +48,21 @@ class BigQuerySyncer(private val serviceAccountJson: String, private val dataset
         }
     }
 
-    suspend fun streamRow(heartbeat: VehicleHeartbeat) {
+    suspend fun syncBatch(heartbeats: List<VehicleHeartbeat>): Boolean {
+        if (heartbeats.isEmpty()) return true
+        
         if (projectId.isNullOrBlank()) {
             Log.e(TAG, "Missing project_id in Service Account JSON")
-            return
+            return false
         }
         
         val token = getAccessToken()
         if (token == null) {
             Log.e(TAG, "Missing Access Token")
-            return
+            return false
         }
 
-        withContext(Dispatchers.IO) {
+        return withContext(Dispatchers.IO) {
             try {
                 val url = URL("https://bigquery.googleapis.com/bigquery/v2/projects/$projectId/datasets/$datasetId/tables/$tableId/insertAll")
                 val conn = url.openConnection() as HttpURLConnection
@@ -73,55 +75,58 @@ class BigQuerySyncer(private val serviceAccountJson: String, private val dataset
                     timeZone = TimeZone.getTimeZone("UTC")
                 }
                 
-                val rowMap = mapOf(
-                    "tripId" to heartbeat.tripId,
-                    "timestamp" to dateFormat.format(heartbeat.timestamp),
-                    "activeSeconds" to heartbeat.activeSeconds,
-                    "idlingSeconds" to heartbeat.idlingSeconds,
-                    "avgRpm" to heartbeat.avgRpm,
-                    "avgEngineLoad" to heartbeat.avgEngineLoad,
-                    "avgSpeed" to heartbeat.avgSpeed,
-                    "avgThrottlePosition" to heartbeat.avgThrottlePosition,
-                    "avgIntakeAirTemp" to heartbeat.avgIntakeAirTemp,
-                    "avgBatteryVoltage" to heartbeat.avgBatteryVoltage,
-                    "minBatteryVoltage" to heartbeat.minBatteryVoltage,
-                    "maxBatteryVoltage" to heartbeat.maxBatteryVoltage,
-                    "maxSpeed" to heartbeat.maxSpeed,
-                    "maxRpm" to heartbeat.maxRpm,
-                    "maxCoolantTemp" to heartbeat.maxCoolantTemp,
-                    "baroPressure" to heartbeat.baroPressure,
-                    "fuelLevel" to heartbeat.fuelLevel
-                )
-
-                val payloadMap = mapOf(
-                    "rows" to listOf(
-                        mapOf(
-                            "insertId" to UUID.randomUUID().toString(),
-                            "json" to rowMap
-                        )
+                val rows = heartbeats.map { heartbeat ->
+                    val rowMap = mapOf(
+                        "tripId" to heartbeat.tripId,
+                        "timestamp" to dateFormat.format(heartbeat.timestamp),
+                        "activeSeconds" to heartbeat.activeSeconds,
+                        "idlingSeconds" to heartbeat.idlingSeconds,
+                        "avgRpm" to heartbeat.avgRpm,
+                        "avgEngineLoad" to heartbeat.avgEngineLoad,
+                        "avgSpeed" to heartbeat.avgSpeed,
+                        "avgThrottlePosition" to heartbeat.avgThrottlePosition,
+                        "avgIntakeAirTemp" to heartbeat.avgIntakeAirTemp,
+                        "avgBatteryVoltage" to heartbeat.avgBatteryVoltage,
+                        "minBatteryVoltage" to heartbeat.minBatteryVoltage,
+                        "maxBatteryVoltage" to heartbeat.maxBatteryVoltage,
+                        "maxSpeed" to heartbeat.maxSpeed,
+                        "maxRpm" to heartbeat.maxRpm,
+                        "maxCoolantTemp" to heartbeat.maxCoolantTemp,
+                        "baroPressure" to heartbeat.baroPressure,
+                        "fuelLevel" to heartbeat.fuelLevel
                     )
-                )
+                    mapOf(
+                        "insertId" to UUID.randomUUID().toString(),
+                        "json" to rowMap
+                    )
+                }
 
+                val payloadMap = mapOf("rows" to rows)
                 val payloadString = gson.toJson(payloadMap)
+                
                 conn.outputStream.write(payloadString.toByteArray())
                 conn.outputStream.flush()
                 conn.outputStream.close()
 
                 val responseCode = conn.responseCode
+                var success = false
                 if (responseCode in 200..299) {
                     val responseStr = conn.inputStream.bufferedReader().readText()
                     if (responseStr.contains("insertErrors")) {
                         Log.e(TAG, "BigQuery InsertErrors: $responseStr")
                     } else {
-                        Log.i(TAG, "Successfully streamed heartbeat to BigQuery")
+                        Log.i(TAG, "Successfully synced ${heartbeats.size} heartbeats to BigQuery")
+                        success = true
                     }
                 } else {
                     val errorStr = conn.errorStream?.bufferedReader()?.readText()
-                    Log.e(TAG, "Failed to stream: HTTP $responseCode - $errorStr")
+                    Log.e(TAG, "Failed to sync: HTTP $responseCode - $errorStr")
                 }
                 conn.disconnect()
+                success
             } catch (e: Exception) {
-                Log.e(TAG, "Exception streaming to BigQuery: ${e.message}")
+                Log.e(TAG, "Exception syncing to BigQuery: ${e.message}")
+                false
             }
         }
     }

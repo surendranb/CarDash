@@ -133,4 +133,15 @@ interface OBDLogDao {
     
     @Query("SELECT * FROM vehicle_heartbeats ORDER BY timestamp ASC")
     fun getAllHeartbeatsFlow(): Flow<List<VehicleHeartbeat>>
+
+    // === SYNC METHODS ===
+
+    @Query("SELECT * FROM vehicle_heartbeats WHERE isSynced = 0 ORDER BY timestamp ASC LIMIT :limit")
+    suspend fun getUnsyncedHeartbeats(limit: Int = 500): List<VehicleHeartbeat>
+
+    @Query("UPDATE vehicle_heartbeats SET isSynced = 1 WHERE id IN (:ids)")
+    suspend fun markAsSynced(ids: List<Long>)
+
+    @Query("SELECT COUNT(*) FROM vehicle_heartbeats WHERE isSynced = 0")
+    fun getUnsyncedCountFlow(): Flow<Int>
 }

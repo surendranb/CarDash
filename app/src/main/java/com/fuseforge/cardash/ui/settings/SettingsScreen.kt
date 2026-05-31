@@ -11,6 +11,10 @@ import androidx.compose.ui.unit.dp
 import com.fuseforge.cardash.data.PreferencesManager
 import com.fuseforge.cardash.ui.theme.Error
 import com.fuseforge.cardash.ui.theme.Success
+import com.fuseforge.cardash.data.db.AppDatabase
+import com.fuseforge.cardash.services.cloud.BigQuerySyncWorker
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -36,6 +40,10 @@ fun SettingsScreen() {
     var bqDatasetId by remember { mutableStateOf(prefsManager.getBqDatasetId()) }
     var bqTableId by remember { mutableStateOf(prefsManager.getBqTableId()) }
     var bqServiceAccountJson by remember { mutableStateOf(prefsManager.getBqServiceAccountJson()) }
+    var bqSyncMode by remember { mutableStateOf(prefsManager.getBqSyncMode()) }
+
+    val database = remember { AppDatabase.getDatabase(context) }
+    val unsyncedCount by database.obdLogDao().getUnsyncedCountFlow().collectAsState(initial = 0)
 
     val scope = rememberCoroutineScope()
     val exportLauncher = rememberLauncherForActivityResult(
@@ -347,6 +355,50 @@ fun SettingsScreen() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp)
                 )
+            }
+
+            if (bqServiceAccountJson.isNotBlank()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Sync Configuration", style = MaterialTheme.typography.titleSmall)
+                
+                val syncModes = listOf("REALTIME", "HOURLY", "WIFI_ONLY", "MANUAL")
+                androidx.compose.foundation.lazy.LazyRow(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(syncModes.size) { index ->
+                        val mode = syncModes[index]
+                        FilterChip(
+                            selected = bqSyncMode == mode,
+                            onClick = {
+                                bqSyncMode = mode
+                                prefsManager.setBqSyncMode(mode)
+                            },
+                            label = { Text(mode.replace("_", " ")) }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        val lastSyncTime = prefsManager.getLastSyncTime()
+                        val timeStr = if (lastSyncTime > 0) java.text.SimpleDateFormat("MMM dd, HH:mm").format(java.util.Date(lastSyncTime)) else "Never"
+                        Text("Unsynced Records: $unsyncedCount", style = MaterialTheme.typography.bodyMedium)
+                        Text("Last Sync: $timeStr", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Button(onClick = {
+                        val request = OneTimeWorkRequestBuilder<BigQuerySyncWorker>().build()
+                        WorkManager.getInstance(context).enqueue(request)
+                        Toast.makeText(context, "Sync Queued", Toast.LENGTH_SHORT).show()
+                    }) {
+                        Text("Sync Now")
+                    }
+                }
             }
         }
 
