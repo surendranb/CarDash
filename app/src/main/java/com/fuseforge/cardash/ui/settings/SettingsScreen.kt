@@ -11,6 +11,16 @@ import androidx.compose.ui.unit.dp
 import com.fuseforge.cardash.data.PreferencesManager
 import com.fuseforge.cardash.ui.theme.Error
 import com.fuseforge.cardash.ui.theme.Success
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileInputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,6 +33,76 @@ fun SettingsScreen() {
     var geminiApiKey by remember { mutableStateOf(prefsManager.getGeminiApiKey()) }
     var geminiModelName by remember { mutableStateOf(prefsManager.getGeminiModelName()) }
     var fuelMultiplier by remember { mutableStateOf(prefsManager.getFuelMultiplier().toString()) }
+    var bqDatasetId by remember { mutableStateOf(prefsManager.getBqDatasetId()) }
+    var bqTableId by remember { mutableStateOf(prefsManager.getBqTableId()) }
+    var bqServiceAccountJson by remember { mutableStateOf(prefsManager.getBqServiceAccountJson()) }
+
+    val scope = rememberCoroutineScope()
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                            ZipOutputStream(outputStream).use { zos ->
+                                val dbFiles = listOf(
+                                    context.getDatabasePath("car_dash_database"),
+                                    context.getDatabasePath("car_dash_database-shm"),
+                                    context.getDatabasePath("car_dash_database-wal")
+                                )
+                                dbFiles.forEach { dbFile ->
+                                    if (dbFile.exists()) {
+                                        zos.putNextEntry(ZipEntry(dbFile.name))
+                                        FileInputStream(dbFile).use { it.copyTo(zos) }
+                                        zos.closeEntry()
+                                    }
+                                }
+                                val prefsFiles = listOf(
+                                    File(context.applicationInfo.dataDir, "shared_prefs/CarDashPrefs.xml"),
+                                    File(context.filesDir, "datastore/settings.preferences_pb")
+                                )
+                                prefsFiles.forEach { prefsFile ->
+                                    if (prefsFile.exists()) {
+                                        zos.putNextEntry(ZipEntry(prefsFile.name))
+                                        FileInputStream(prefsFile).use { it.copyTo(zos) }
+                                        zos.closeEntry()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Toast.makeText(context, "Export successful", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    val bqJsonLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    val content = withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
+                    }
+                    if (content != null && content.contains("private_key")) {
+                        bqServiceAccountJson = content
+                        prefsManager.setBqServiceAccountJson(content)
+                        Toast.makeText(context, "Service Account Loaded!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Invalid JSON key file", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Failed to read file", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -184,6 +264,85 @@ fun SettingsScreen() {
 
                 Text(
                     text = "Enter any valid model ID from Google AI Studio. Flash-Lite is fast; Pro is for deep diagnostics.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+        }
+
+        item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
+
+        // Data Management
+        item {
+            Text(
+                text = "Data Management",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = { exportLauncher.launch("cardash_export_${System.currentTimeMillis()}.zip") },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Export App Data (ZIP)")
+            }
+            Text(
+                text = "Export your telemetry database and AI chat history.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+
+        item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
+
+        // BigQuery BYOK
+        item {
+            Text(
+                text = "BigQuery Live Telemetry",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = bqDatasetId,
+                onValueChange = { 
+                    bqDatasetId = it
+                    prefsManager.setBqDatasetId(it)
+                },
+                label = { Text("Dataset ID") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = bqTableId,
+                onValueChange = { 
+                    bqTableId = it
+                    prefsManager.setBqTableId(it)
+                },
+                label = { Text("Table ID") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = { bqJsonLauncher.launch(arrayOf("application/json", "*/*")) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (bqServiceAccountJson.isNotBlank()) "Update Service Account JSON" else "Load Service Account JSON")
+            }
+            if (bqServiceAccountJson.isNotBlank()) {
+                Text(
+                    text = "Service Account Key loaded.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Success,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            } else {
+                Text(
+                    text = "Load a GCP Service Account JSON with BigQuery Data Editor permissions to stream telemetry.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp)
