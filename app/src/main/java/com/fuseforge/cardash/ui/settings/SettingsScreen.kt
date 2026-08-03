@@ -305,6 +305,67 @@ fun SettingsScreen() {
 
         item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
 
+        // Dashcam Configuration
+        item {
+            Text(
+                text = "Dashcam Integration",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            var dashcamEnabled by remember { mutableStateOf(prefsManager.isDashcamEnabled()) }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Live Video Streaming",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = "Show dashcam feed on the home screen",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = dashcamEnabled,
+                    onCheckedChange = { 
+                        dashcamEnabled = it
+                        prefsManager.setDashcamEnabled(it)
+                    }
+                )
+            }
+            if (dashcamEnabled) {
+                Spacer(modifier = Modifier.height(16.dp))
+                var dashcamUrl by remember { mutableStateOf(prefsManager.getDashcamUrl()) }
+                OutlinedTextField(
+                    value = dashcamUrl,
+                    onValueChange = { 
+                        dashcamUrl = it
+                        prefsManager.setDashcamUrl(it)
+                    },
+                    label = { Text("RTSP Stream URL") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                    )
+                )
+                Text(
+                    text = "Ensure your tablet is connected to the dashcam's Wi-Fi.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+        }
+
+        item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
+
         // BigQuery BYOK
         item {
             Text(

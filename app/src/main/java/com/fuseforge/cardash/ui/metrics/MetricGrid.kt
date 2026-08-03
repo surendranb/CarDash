@@ -159,6 +159,12 @@ fun TabletMetricGrid(
     // Get engine state from the ViewModel
     val viewModel: MetricViewModel = viewModel()
     val engineRunning by viewModel.engineRunning.collectAsState()
+    
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefsManager = androidx.compose.runtime.remember { com.fuseforge.cardash.data.PreferencesManager(context) }
+    // Using remember with a key ensures it re-evaluates when returning from settings if context changes,
+    // though a flow would be better for real-time reactivity.
+    val isDashcamEnabled = prefsManager.isDashcamEnabled()
 
     // Use CompactMetricCard for more efficient space usage on tablets
     Column(
@@ -181,16 +187,18 @@ fun TabletMetricGrid(
             modifier = Modifier.fillMaxWidth().weight(1f),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Left side: Dashcam (taking up space of ~3 cards width)
-            DashcamPlayerCard(
-                modifier = Modifier
-                    .weight(1.2f)
-                    .fillMaxHeight()
-            )
+            if (isDashcamEnabled) {
+                // Left side: Dashcam (taking up space of ~3 cards width)
+                DashcamPlayerCard(
+                    modifier = Modifier
+                        .weight(1.2f)
+                        .fillMaxHeight()
+                )
+            }
             
             // Right side: Metrics Grid
             Column(
-                modifier = Modifier.weight(1.8f),
+                modifier = Modifier.weight(if (isDashcamEnabled) 1.8f else 1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
 // Lifetime metrics row

@@ -29,6 +29,7 @@ private const val KEY_BQ_TABLE_ID = "bq_table_id"
 private const val KEY_BQ_SYNC_MODE = "bq_sync_mode"
 private const val KEY_BQ_LAST_SYNC_TIME = "bq_last_sync_time"
 private const val KEY_DASHCAM_URL = "dashcam_url"
+private const val KEY_DASHCAM_ENABLED = "dashcam_enabled"
 
 class PreferencesManager(private val context: Context) {
     
@@ -223,6 +224,14 @@ class PreferencesManager(private val context: Context) {
 
     fun setDashcamUrl(url: String) {
         preferences.edit().putString(KEY_DASHCAM_URL, url).apply()
+    }
+
+    fun isDashcamEnabled(): Boolean {
+        return preferences.getBoolean(KEY_DASHCAM_ENABLED, false)
+    }
+
+    fun setDashcamEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_DASHCAM_ENABLED, enabled).apply()
     }
 
     // Add other preference methods below as needed
