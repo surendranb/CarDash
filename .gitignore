@@ -47,3 +47,4 @@ swap_files.sh
 build/
 scratch/
 parse_test.kt
+cardash-telemetry-key*.json

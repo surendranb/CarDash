@@ -30,28 +30,37 @@ class BigQuerySyncWorker(
 
         val database = AppDatabase.getDatabase(applicationContext)
         val obdLogDao = database.obdLogDao()
-
-        val unsyncedHeartbeats = obdLogDao.getUnsyncedHeartbeats(limit = 500)
-        
-        if (unsyncedHeartbeats.isEmpty()) {
-            Log.i(TAG, "No unsynced heartbeats found.")
-            return@withContext Result.success()
-        }
-
-        Log.i(TAG, "Attempting to sync ${unsyncedHeartbeats.size} heartbeats to BigQuery...")
-
         val syncer = BigQuerySyncer(bqJson, datasetId, tableId)
-        val success = syncer.syncBatch(unsyncedHeartbeats)
+        
+        var totalSynced = 0
+        var keepSyncing = true
 
-        if (success) {
-            val ids = unsyncedHeartbeats.map { it.id }
-            obdLogDao.markAsSynced(ids)
-            prefsManager.setLastSyncTime(System.currentTimeMillis())
-            Log.i(TAG, "Successfully synced and marked ${ids.size} heartbeats as synced.")
-            Result.success()
-        } else {
-            Log.e(TAG, "Failed to sync batch. Will retry later.")
-            Result.retry()
+        while (keepSyncing) {
+            val unsyncedHeartbeats = obdLogDao.getUnsyncedHeartbeats(limit = 1000)
+            
+            if (unsyncedHeartbeats.isEmpty()) {
+                keepSyncing = false
+                continue
+            }
+
+            val success = syncer.syncBatch(unsyncedHeartbeats)
+            if (success) {
+                val ids = unsyncedHeartbeats.map { it.id }
+                obdLogDao.markAsSynced(ids)
+                totalSynced += ids.size
+                prefsManager.setLastSyncTime(System.currentTimeMillis())
+            } else {
+                Log.e(TAG, "Failed to sync a batch. Stopping early. Will retry later.")
+                return@withContext Result.retry()
+            }
         }
+
+        if (totalSynced > 0) {
+            Log.i(TAG, "Successfully synced and marked $totalSynced heartbeats as synced.")
+        } else {
+            Log.i(TAG, "No unsynced heartbeats found.")
+        }
+        
+        Result.success()
     }
 }

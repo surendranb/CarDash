@@ -88,15 +88,18 @@ class Telemetrist(
                 }
             }
 
+            var retryDelay = 2000L
             while (coroutineContext.isActive) {
                 try {
                     activeLink = establishLink(deviceAddress)
+                    retryDelay = 2000L // reset on successful link
                     runTelemetryLoop(activeLink!!)
                 } catch (e: Exception) {
                     Log.e(TAG, "Reactor Restarting: ${e.message}")
                     updateStatus(TelemetryStatus.ERROR)
                     activeLink?.close()
-                    delay(5000)
+                    delay(retryDelay)
+                    retryDelay = (retryDelay * 2).coerceAtMost(30000L)
                 }
             }
         }

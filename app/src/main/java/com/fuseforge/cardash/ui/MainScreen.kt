@@ -97,6 +97,13 @@ import android.content.Context
 import android.content.Intent
 import com.fuseforge.cardash.utils.GeminiPromptBuilder
 import androidx.compose.material3.CircularProgressIndicator
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.runtime.DisposableEffect
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTextApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -121,13 +128,13 @@ fun MainScreen(
     var showDeviceDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
     var devices by remember { mutableStateOf(emptySet<BluetoothDevice>()) }
-    var isGeneratingPrompt by remember { mutableStateOf(false) }
-    
     val connectionState by viewModel.connectionState.collectAsState()
-    val engineRunning by viewModel.engineRunning.collectAsState()
     
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    
+    var isLocationEnabled by remember { mutableStateOf(true) }
+    var isBluetoothOn by remember { mutableStateOf(true) }
     
     // Create tabs list based on visibility settings
     val tabs = mutableListOf<String>()
@@ -136,6 +143,7 @@ fun MainScreen(
     if (tabSettings.showDiagnosticsTab) tabs.add("Diagnostics")
     if (tabSettings.showHistoryTab) tabs.add("History")
     if (com.fuseforge.cardash.data.PreferencesManager(context).isAiInsightsEnabled()) tabs.add("Assistant")
+    tabs.add("Dashcam")
     tabs.add("Settings")
     
     // Ensure selected tab is valid after settings change
@@ -151,24 +159,36 @@ fun MainScreen(
             }) {
             onPermissionNeeded()
         }
-
-        // Check if Location Services are enabled
-        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
-        val isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
         
-        if (!isGpsEnabled && !isNetworkEnabled) {
-            scope.launch {
-                snackbarHostState.showSnackbar(
-                    message = "Location Services are disabled. GPS speed data will be unavailable.",
-                    actionLabel = "Settings",
-                    duration = androidx.compose.material3.SnackbarDuration.Long
-                ).let { result ->
-                    if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                        context.startActivity(android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        isLocationEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || 
+                            locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        isBluetoothOn = bluetoothManager.isBluetoothEnabled()
+    }
+
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context, intent: Intent) {
+                when (intent.action) {
+                    LocationManager.PROVIDERS_CHANGED_ACTION -> {
+                        val lm = c.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                        isLocationEnabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER) || 
+                                            lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+                    }
+                    android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED -> {
+                        val state = intent.getIntExtra(android.bluetooth.BluetoothAdapter.EXTRA_STATE, android.bluetooth.BluetoothAdapter.ERROR)
+                        isBluetoothOn = (state == android.bluetooth.BluetoothAdapter.STATE_ON)
                     }
                 }
             }
+        }
+        val filter = IntentFilter().apply {
+            addAction(LocationManager.PROVIDERS_CHANGED_ACTION)
+            addAction(android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED)
+        }
+        context.registerReceiver(receiver, filter)
+        onDispose {
+            context.unregisterReceiver(receiver)
         }
     }
 
@@ -197,11 +217,48 @@ fun MainScreen(
             )
         }
         
+        AnimatedVisibility(
+            visible = !isLocationEnabled || !isBluetoothOn,
+            enter = expandVertically(),
+            exit = shrinkVertically()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(ThemeError)
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .clickable {
+                        if (!isLocationEnabled) {
+                            context.startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                        } else {
+                            context.startActivity(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS))
+                        }
+                    },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = "Warning",
+                    tint = MaterialTheme.colorScheme.onError,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Text(
+                    text = if (!isLocationEnabled) "Location disabled. Tap to enable." else "Bluetooth disabled. Tap to enable.",
+                    color = MaterialTheme.colorScheme.onError,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+        
         // Improved App header with proper spacing and status bar avoidance
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.statusBars), // Use WindowInsets for proper status bar padding
+                .then(
+                    if (!isLocationEnabled || !isBluetoothOn) Modifier else Modifier.windowInsetsPadding(WindowInsets.statusBars)
+                ),
             color = MaterialTheme.colorScheme.primaryContainer,
             tonalElevation = 4.dp,
             shadowElevation = 2.dp
@@ -278,14 +335,14 @@ fun MainScreen(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             divider = {
-                Divider(
+                androidx.compose.material3.HorizontalDivider(
                     thickness = 2.dp,
                     color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f)
                 )
             },
             indicator = { tabPositions ->
                 if (selectedTab < tabPositions.size) {
-                    TabRowDefaults.Indicator(
+                    TabRowDefaults.SecondaryIndicator(
                         modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
                         height = 3.dp,
                         color = MaterialTheme.colorScheme.secondary
@@ -330,6 +387,7 @@ fun MainScreen(
                 }
                 "History" -> HistoryScreen()
                 "Assistant" -> com.fuseforge.cardash.ui.ai.MechanicScreen()
+                "Dashcam" -> com.fuseforge.cardash.ui.dashcam.DashcamScreen()
                 "Settings" -> com.fuseforge.cardash.ui.settings.SettingsScreen()
                 else -> MetricGridScreen(removeEngineStatus = true) // Default fallback
             }
@@ -348,10 +406,8 @@ fun MainScreen(
 @Composable
 fun CombinedStatusBar(
     connectionState: MetricViewModel.ConnectionState,
-    engineRunning: Boolean,
     onClick: () -> Unit = {}
 ) {
-    val isConnected = connectionState is MetricViewModel.ConnectionState.Connected
     
     Surface(
         modifier = Modifier
@@ -435,7 +491,7 @@ fun DeviceSelectionDialog(
                                 .padding(vertical = 16.dp, horizontal = 8.dp), // Improved padding
                             textAlign = TextAlign.Start
                         )
-                        Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                        androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
                     }
                 }
             }

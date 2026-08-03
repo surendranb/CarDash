@@ -8,6 +8,7 @@ import com.fuseforge.cardash.data.db.AppDatabase
 import com.fuseforge.cardash.ui.ai.ChatMessage
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
+import android.graphics.Bitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -202,6 +203,35 @@ class CarDashAgent(private val context: Context) {
             }
         } catch (e: Exception) {
             "Error executing local query: ${e.message}"
+        }
+    }
+
+    suspend fun analyzeDashcamFrame(bitmap: Bitmap, prompt: String): String = withContext(Dispatchers.IO) {
+        val apiKey = prefs.getGeminiApiKey()
+        if (apiKey.isBlank()) {
+            return@withContext "Error: No Gemini API Key found. Please add your token in Settings."
+        }
+
+        val modelName = prefs.getGeminiModelName().ifBlank { "gemini-1.5-flash" } // Prefer flash for vision tasks
+
+        val model = GenerativeModel(
+            modelName = modelName,
+            apiKey = apiKey,
+            systemInstruction = content {
+                text("You are the CarDash vision assistant. Analyze the dashcam frame and answer the user's prompt succinctly. Look out for road hazards, license plates, and traffic signs.")
+            }
+        )
+
+        try {
+            val response = model.generateContent(
+                content {
+                    image(bitmap)
+                    text(prompt)
+                }
+            )
+            return@withContext response.text ?: "Could not analyze the frame."
+        } catch (e: Exception) {
+            return@withContext "Error analyzing frame: ${e.message}"
         }
     }
 }

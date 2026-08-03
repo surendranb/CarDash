@@ -14,6 +14,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.ExistingPeriodicWorkPolicy
+import java.util.concurrent.TimeUnit
+import com.fuseforge.cardash.services.cloud.BigQuerySyncWorker
 
 class CarDashApp : Application() {
 
@@ -54,6 +59,19 @@ class CarDashApp : Application() {
         super.onCreate()
         applicationScope.launch(Dispatchers.IO) {
             DTCDataSeeder.seedIfEmpty(database.diagnosticDao())
+        }
+        
+        // Schedule weekly BigQuery sync if configured
+        val prefs = PreferencesManager(this)
+        if (prefs.getBqSyncMode() == "WEEKLY") {
+            val weeklySyncRequest = PeriodicWorkRequestBuilder<BigQuerySyncWorker>(7, TimeUnit.DAYS).build()
+            WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                "BigQueryWeeklySync",
+                ExistingPeriodicWorkPolicy.KEEP,
+                weeklySyncRequest
+            )
+        } else {
+            WorkManager.getInstance(this).cancelUniqueWork("BigQueryWeeklySync")
         }
     }
     

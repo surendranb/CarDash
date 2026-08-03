@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuseforge.cardash.ui.components.MetricCard
 import com.fuseforge.cardash.ui.components.MetricCardType
+import com.fuseforge.cardash.ui.components.DashcamPlayerCard
 import com.fuseforge.cardash.ui.components.MetricStatus
 import com.fuseforge.cardash.ui.components.TinyStatusIndicators
 import com.fuseforge.cardash.ui.theme.CarDashTheme
@@ -161,7 +162,7 @@ fun TabletMetricGrid(
 
     // Use CompactMetricCard for more efficient space usage on tablets
     Column(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxSize()
     ) {
         // Tiny status indicators in the top left
         Box(
@@ -176,7 +177,23 @@ fun TabletMetricGrid(
             )
         }
         
-        // Lifetime metrics row
+        Row(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Left side: Dashcam (taking up space of ~3 cards width)
+            DashcamPlayerCard(
+                modifier = Modifier
+                    .weight(1.2f)
+                    .fillMaxHeight()
+            )
+            
+            // Right side: Metrics Grid
+            Column(
+                modifier = Modifier.weight(1.8f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+// Lifetime metrics row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -210,7 +227,7 @@ fun TabletMetricGrid(
             )
         }
         
-        Spacer(modifier = Modifier.height(8.dp))
+        
         
         // Top row - Primary metrics (3 columns)
         Row(
@@ -278,32 +295,9 @@ fun TabletMetricGrid(
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // GPS vs OBD Speed row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            MetricCard(
-                title = "GPS SPEED",
-                value = speedGps.toString(),
-                unit = "km/h",
-                status = MetricStatus.GOOD,
-                isConnected = isConnected,
-                modifier = Modifier.weight(1f)
-            )
-            
-            GForceCard(
-                x = gForceX,
-                y = gForceY,
-                z = gForceZ,
-                isConnected = isConnected,
-                modifier = Modifier.weight(2f)
-            )
-        }
         
-        Spacer(modifier = Modifier.height(8.dp))
+
+        
         
         // Middle section - (4 columns)
         Row(
@@ -380,7 +374,7 @@ fun TabletMetricGrid(
             )
         }
         
-        Spacer(modifier = Modifier.height(8.dp))
+        
         
         // Bottom row - (3 columns)
         Row(
@@ -426,8 +420,11 @@ fun TabletMetricGrid(
         }
         
         // Add space at the bottom for the OS navigation
-        Spacer(modifier = Modifier.height(48.dp))
-    }
+        
+    
+            }
+        }
+}
 }
 
 @Composable
@@ -554,31 +551,7 @@ fun PhoneMetricGrid(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // GPS Speed and G-Force for Phone
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            MetricCard(
-                title = "GPS SPEED",
-                value = speedGps.toString(),
-                unit = "km/h",
-                status = MetricStatus.GOOD,
-                isConnected = isConnected,
-                modifier = Modifier.weight(1f)
-            )
-            
-            MetricCard(
-                title = "LATERAL G",
-                value = String.format("%.2f", gForceX),
-                unit = "G",
-                status = MetricStatus.GOOD,
-                isConnected = isConnected,
-                modifier = Modifier.weight(1f)
-            )
-        }
         
-        Spacer(modifier = Modifier.height(16.dp))
         
         // Coolant Temperature
         // Normal: 60-90°C

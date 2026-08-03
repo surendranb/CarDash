@@ -12,8 +12,8 @@ android {
         applicationId = "com.fuseforge.cardash"
         minSdk = 26
         targetSdk = 35
-        versionCode = 44
-        versionName = "2.3.9"
+        versionCode = 49
+        versionName = "2.3.14"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
@@ -123,6 +123,11 @@ dependencies {
     // BigQuery BYOK integration
     implementation("com.google.auth:google-auth-library-oauth2-http:1.23.0")
     implementation("com.google.code.gson:gson:2.10.1")
+    
+    // ExoPlayer (Dashcam RTSP Streaming)
+    implementation("androidx.media3:media3-exoplayer:1.2.0")
+    implementation("androidx.media3:media3-exoplayer-rtsp:1.2.0")
+    implementation("androidx.media3:media3-ui:1.2.0")
     
     // Testing
     testImplementation("junit:junit:4.13.2")

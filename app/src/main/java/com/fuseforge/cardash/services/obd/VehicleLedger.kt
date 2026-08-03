@@ -10,6 +10,8 @@ import com.fuseforge.cardash.services.cloud.BigQuerySyncWorker
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.*
 import android.content.Context
 
@@ -26,6 +28,7 @@ class VehicleLedger(
 ) {
     private val TAG = "VehicleLedger"
     private var ledgerJob: Job? = null
+    private val mutex = Mutex()
     
     // Aggregation Buffers
     private var pointsInMinute = 0
@@ -82,76 +85,81 @@ class VehicleLedger(
         }
     }
 
-    private fun aggregate(state: VehicleState) {
-        pointsInMinute++
-        if (state.speedKph <= 0) {
-            idlePointsInMinute++
+    private suspend fun aggregate(state: VehicleState) {
+        mutex.withLock {
+            pointsInMinute++
+            if (state.speedKph <= 0) {
+                idlePointsInMinute++
+            }
+            rpmSum += state.rpm
+            loadSum += state.engineLoad
+            speedSum += state.speedKph
+            throttleSum += state.throttlePos
+            iatSum += state.intakeAirTemp
+            baroPressureSum += state.baroPressure
+            coolantMax = maxOf(coolantMax, state.coolantTemp)
+            speedMax = maxOf(speedMax, state.speedKph)
+            rpmMax = maxOf(rpmMax, state.rpm)
+            if (state.batteryVoltage > 0) {
+                voltMin = minOf(voltMin, state.batteryVoltage)
+                voltMax = maxOf(voltMax, state.batteryVoltage)
+            }
+            fuelLevelLast = state.fuelLevel
         }
-        rpmSum += state.rpm
-        loadSum += state.engineLoad
-        speedSum += state.speedKph
-        throttleSum += state.throttlePos
-        iatSum += state.intakeAirTemp
-        baroPressureSum += state.baroPressure
-        coolantMax = maxOf(coolantMax, state.coolantTemp)
-        speedMax = maxOf(speedMax, state.speedKph)
-        rpmMax = maxOf(rpmMax, state.rpm)
-        if (state.batteryVoltage > 0) {
-            voltMin = minOf(voltMin, state.batteryVoltage)
-            voltMax = maxOf(voltMax, state.batteryVoltage)
-        }
-        fuelLevelLast = state.fuelLevel
     }
 
     private suspend fun commitHeartbeat() {
-        if (pointsInMinute == 0) return
-        
-        val now = System.currentTimeMillis()
-        val elapsedSeconds = ((now - lastMinuteMark) / 1000).coerceAtMost(60).coerceAtLeast(1).toInt()
-        val idleRatio = idlePointsInMinute.toFloat() / pointsInMinute
-        val idlingSeconds = (elapsedSeconds * idleRatio).toInt()
+        val heartbeat = mutex.withLock {
+            if (pointsInMinute == 0) return
+            
+            val now = System.currentTimeMillis()
+            val elapsedSeconds = ((now - lastMinuteMark) / 1000).coerceAtMost(60).coerceAtLeast(1).toInt()
+            val idleRatio = idlePointsInMinute.toFloat() / pointsInMinute
+            val idlingSeconds = (elapsedSeconds * idleRatio).toInt()
+    
+            val snap = VehicleHeartbeat(
+                tripId = telemetrist.state.value.sessionId,
+                timestamp = Date(),
+                activeSeconds = elapsedSeconds,
+                idlingSeconds = idlingSeconds,
+                avgRpm = (rpmSum / pointsInMinute).toInt(),
+                avgEngineLoad = (loadSum / pointsInMinute).toInt(),
+                avgSpeed = (speedSum / pointsInMinute).toInt(),
+                avgThrottlePosition = (throttleSum / pointsInMinute).toInt(),
+                avgIntakeAirTemp = (iatSum / pointsInMinute).toInt(),
+                avgBatteryVoltage = if (voltMin < 20) (voltMin) else null, // Simplified
+                minBatteryVoltage = if (voltMin < 20) (voltMin) else null,
+                maxBatteryVoltage = if (voltMax > 0) (voltMax) else null,
+                maxSpeed = if (speedMax > 0) speedMax else null,
+                maxRpm = if (rpmMax > 0) rpmMax else null,
+                maxCoolantTemp = if (coolantMax > 0) coolantMax else null,
+                baroPressure = (baroPressureSum / pointsInMinute).toInt(),
+                fuelLevel = fuelLevelLast
+            )
+            
+            // Reset
+            lastMinuteMark = now
+            pointsInMinute = 0
+            idlePointsInMinute = 0
+            rpmSum = 0; loadSum = 0; speedSum = 0; throttleSum = 0; iatSum = 0; baroPressureSum = 0
+            coolantMax = 0; voltMin = 20f; voltMax = 0f; speedMax = 0; rpmMax = 0
+            
+            snap
+        }
 
-        val heartbeat = VehicleHeartbeat(
-            tripId = telemetrist.state.value.sessionId,
-            timestamp = Date(),
-            activeSeconds = elapsedSeconds,
-            idlingSeconds = idlingSeconds,
-            avgRpm = (rpmSum / pointsInMinute).toInt(),
-            avgEngineLoad = (loadSum / pointsInMinute).toInt(),
-            avgSpeed = (speedSum / pointsInMinute).toInt(),
-            avgThrottlePosition = (throttleSum / pointsInMinute).toInt(),
-            avgIntakeAirTemp = (iatSum / pointsInMinute).toInt(),
-            avgBatteryVoltage = if (voltMin < 20) (voltMin) else null, // Simplified
-            minBatteryVoltage = if (voltMin < 20) (voltMin) else null,
-            maxBatteryVoltage = if (voltMax > 0) (voltMax) else null,
-            maxSpeed = if (speedMax > 0) speedMax else null,
-            maxRpm = if (rpmMax > 0) rpmMax else null,
-            maxCoolantTemp = if (coolantMax > 0) coolantMax else null,
-            baroPressure = (baroPressureSum / pointsInMinute).toInt(),
-            fuelLevel = fuelLevelLast
-        )
-
-        withContext(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             try {
                 database.obdLogDao().insertHeartbeat(heartbeat)
-                Log.i(TAG, "Heartbeat Committed: ${elapsedSeconds}s active, ${idlingSeconds}s idling.")
+                Log.i(TAG, "Heartbeat Committed: ${heartbeat.activeSeconds}s active, ${heartbeat.idlingSeconds}s idling.")
                 // Trigger Sync Worker if in REALTIME mode
                 val bqJson = prefsManager.getBqServiceAccountJson()
                 if (bqJson.isNotBlank() && prefsManager.getBqSyncMode() == "REALTIME") {
                     val request = OneTimeWorkRequestBuilder<BigQuerySyncWorker>().build()
                     WorkManager.getInstance(context).enqueue(request)
                 }
-                Unit
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to commit: ${e.message}")
             }
         }
-
-        // Reset
-        lastMinuteMark = now
-        pointsInMinute = 0
-        idlePointsInMinute = 0
-        rpmSum = 0; loadSum = 0; speedSum = 0; throttleSum = 0; iatSum = 0; baroPressureSum = 0
-        coolantMax = 0; voltMin = 20f; voltMax = 0f; speedMax = 0; rpmMax = 0
     }
 }

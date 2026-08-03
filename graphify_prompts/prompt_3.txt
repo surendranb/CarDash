@@ -1,0 +1,46 @@
+You are a graphify extraction subagent. Read the files listed and extract a knowledge graph fragment.
+Output ONLY valid JSON matching the schema below - no explanation, no markdown fences, no preamble.
+
+Files (chunk 3 of 25):
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/history/HistoryViewModel.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/metrics/AverageSpeedMetricCard.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/metrics/BaroPressureMetricCard.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/metrics/BatteryVoltageMetricCard.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/metrics/CoolantTempMetricCard.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/metrics/EngineLoadMetricCard.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/metrics/FuelDepletionGraphCard.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/metrics/FuelLevelMetricCard.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/metrics/FuelPressureMetricCard.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/metrics/FuelUsageMetricCard.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/metrics/IntakeAirTempMetricCard.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/metrics/MetricGrid.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/metrics/MetricViewModel.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/metrics/RPMCard.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/metrics/SpeedCard.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/metrics/ThrottlePositionMetricCard.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/settings/AboutDialog.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/settings/SettingsDialog.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/settings/SettingsScreen.kt
+/Users/surendran/Projects/CarDash/app/src/main/java/com/fuseforge/cardash/ui/settings/TabSettings.kt
+
+Rules:
+- EXTRACTED: relationship explicit in source (import, call, citation, "see §3.2")
+- INFERRED: reasonable inference (shared data structure, implied dependency)
+- AMBIGUOUS: uncertain - flag for review, do not omit
+
+Code files: focus on semantic edges AST cannot find (call relationships, shared data, arch patterns).
+  Do not re-extract imports - AST already has those.
+Doc/paper files: extract named concepts, entities, citations.
+Image files: use vision to understand what the image IS - do not just OCR.
+  UI screenshot: layout patterns, design decisions, key elements, purpose.
+  Chart: metric, trend/insight, data source.
+  Tweet/post: claim as node, author, concepts mentioned.
+  Diagram: components and connections.
+  Research figure: what it demonstrates, method, result.
+  Handwritten/whiteboard: ideas and arrows, mark uncertain readings AMBIGUOUS.
+
+If a file has YAML frontmatter (--- ... ---), copy source_url, captured_at, author,
+  contributor onto every node from that file.
+
+Output exactly this JSON (no other text):
+{"nodes":[{"id":"filestem_entityname","label":"Human Readable Name","file_type":"code|document|paper|image","source_file":"relative/path","source_location":null,"source_url":null,"captured_at":null,"author":null,"contributor":null}],"edges":[{"source":"node_id","target":"node_id","relation":"calls|implements|references|cites|conceptually_related_to|shares_data_with","confidence":"EXTRACTED|INFERRED|AMBIGUOUS","source_file":"relative/path","source_location":null,"weight":1.0}],"input_tokens":0,"output_tokens":0}

@@ -28,6 +28,7 @@ private const val KEY_BQ_DATASET_ID = "bq_dataset_id"
 private const val KEY_BQ_TABLE_ID = "bq_table_id"
 private const val KEY_BQ_SYNC_MODE = "bq_sync_mode"
 private const val KEY_BQ_LAST_SYNC_TIME = "bq_last_sync_time"
+private const val KEY_DASHCAM_URL = "dashcam_url"
 
 class PreferencesManager(private val context: Context) {
     
@@ -214,6 +215,14 @@ class PreferencesManager(private val context: Context) {
 
     fun setLastSyncTime(timestamp: Long) {
         preferences.edit().putLong(KEY_BQ_LAST_SYNC_TIME, timestamp).apply()
+    }
+
+    fun getDashcamUrl(): String {
+        return preferences.getString(KEY_DASHCAM_URL, "rtsp://192.168.0.1/live/ch00_1") ?: "rtsp://192.168.0.1/live/ch00_1"
+    }
+
+    fun setDashcamUrl(url: String) {
+        preferences.edit().putString(KEY_DASHCAM_URL, url).apply()
     }
 
     // Add other preference methods below as needed

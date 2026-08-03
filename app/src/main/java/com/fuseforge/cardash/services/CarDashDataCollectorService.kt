@@ -18,6 +18,10 @@ import com.fuseforge.cardash.model.TelemetryStatus
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import android.os.PowerManager
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import android.location.LocationManager
+import android.bluetooth.BluetoothAdapter
 
 class CarDashDataCollectorService : Service() {
 
@@ -26,6 +30,7 @@ class CarDashDataCollectorService : Service() {
     
     private var wakeLock: PowerManager.WakeLock? = null
     private var collectorJob: Job? = null
+    private var statusReceiver: BroadcastReceiver? = null
 
     private val NOTIFICATION_CHANNEL_ID = "CarDashOBDServiceChannel"
     private val NOTIFICATION_ID = 1337
@@ -43,7 +48,61 @@ class CarDashDataCollectorService : Service() {
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "CarDash::OBDDataCollectionWakeLock")
         
+        registerStatusReceiver()
         startReactorObserver()
+    }
+    
+    private fun registerStatusReceiver() {
+        statusReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                // Only alert if we are supposed to be actively collecting
+                if (collectorJob?.isActive != true) return
+                
+                when (intent.action) {
+                    LocationManager.PROVIDERS_CHANGED_ACTION -> {
+                        val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                        val isEnabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER) || 
+                                        lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+                        if (!isEnabled) {
+                            showWarningNotification("GPS Connection Lost", "Please enable Location Services for accurate metrics.")
+                        }
+                    }
+                    BluetoothAdapter.ACTION_STATE_CHANGED -> {
+                        val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
+                        if (state == BluetoothAdapter.STATE_OFF || state == BluetoothAdapter.STATE_TURNING_OFF) {
+                            showWarningNotification("Bluetooth Disabled", "Please enable Bluetooth to stay connected to OBD-II.")
+                        }
+                    }
+                }
+            }
+        }
+        val filter = IntentFilter().apply {
+            addAction(LocationManager.PROVIDERS_CHANGED_ACTION)
+            addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
+        }
+        registerReceiver(statusReceiver, filter)
+    }
+    
+    private fun showWarningNotification(title: String, message: String) {
+        val intent = Intent(this, MainActivity::class.java)
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+        val pendingIntent = PendingIntent.getActivity(this, 0, intent, flags)
+
+        val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentIntent(pendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+            
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.notify(NOTIFICATION_ID + 1, notification)
     }
 
     private fun startReactorObserver() {
@@ -108,11 +167,12 @@ class CarDashDataCollectorService : Service() {
         
         if (wakeLock?.isHeld == true) wakeLock?.release()
         
-        stopForeground(true)
+        stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
     override fun onDestroy() {
+        statusReceiver?.let { unregisterReceiver(it) }
         stopServiceInternal()
         serviceJob.cancel()
         super.onDestroy()
